@@ -3747,9 +3747,10 @@ function printOrderTag(orderId) {
           .top { display: flex; justify-content: space-between; align-items: center; border-bottom: 2px solid #111; padding-bottom: 2mm; margin-bottom: 2mm; }
           .brand { font-size: 12px; font-weight: 800; text-transform: uppercase; }
           .code { font-size: 27px; line-height: 1; font-weight: 900; letter-spacing: 0.5px; }
-          .row { margin: 1.4mm 0; font-size: 12px; line-height: 1.1; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+          .row { margin: 1.2mm 0; font-size: 11.5px; line-height: 1.1; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
           .row strong { display: inline-block; min-width: 22mm; }
-          .equipment { font-size: 16px; line-height: 1.05; font-weight: 800; margin: 2mm 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+          .client-name { border-bottom: 1px solid #111; padding-bottom: 1mm; margin: 1.5mm 0 2mm; font-size: 18px; line-height: 1.05; font-weight: 900; text-transform: uppercase; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+          .equipment { font-size: 19px; line-height: 1.05; font-weight: 900; margin: 2mm 0; text-transform: uppercase; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
           .footer { display: flex; justify-content: space-between; border-top: 1px solid #111; margin-top: 2mm; padding-top: 2mm; font-size: 11px; }
         </style>
       </head>
@@ -3760,7 +3761,7 @@ function printOrderTag(orderId) {
             <div class="code">${escapeHtml(tag)}</div>
           </div>
           <div class="row"><strong>OS:</strong> ${order.number}</div>
-          <div class="row"><strong>Cliente:</strong> ${escapeHtml(customer?.name || "")}</div>
+          <div class="client-name">${escapeHtml(customer?.name || "")}</div>
           <div class="equipment">${escapeHtml(equipment?.brand || "")} ${escapeHtml(equipment?.model || "")}</div>
           <div class="row"><strong>Serie:</strong> ${escapeHtml(equipment?.serial || "-")}</div>
           <div class="row"><strong>Telefone:</strong> ${escapeHtml(customer?.phone || "-")}</div>
