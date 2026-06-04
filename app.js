@@ -3739,16 +3739,18 @@ function printOrderTag(orderId) {
         <meta charset="UTF-8" />
         <title>Etiqueta ${tag}</title>
         <style>
-          @page { size: 100mm 70mm; margin: 6mm; }
-          body { font-family: Arial, sans-serif; color: #111; margin: 0; }
-          .tag { border: 2px solid #111; padding: 12px; width: 100%; box-sizing: border-box; }
-          .top { display: flex; justify-content: space-between; align-items: center; border-bottom: 2px solid #111; padding-bottom: 8px; margin-bottom: 10px; }
-          .brand { font-size: 14px; font-weight: 800; text-transform: uppercase; }
-          .code { font-size: 30px; font-weight: 900; letter-spacing: 1px; }
-          .row { margin: 7px 0; font-size: 14px; }
-          .row strong { display: inline-block; min-width: 88px; }
-          .equipment { font-size: 18px; font-weight: 800; margin: 8px 0; }
-          .footer { display: flex; justify-content: space-between; border-top: 1px solid #111; margin-top: 10px; padding-top: 8px; font-size: 13px; }
+          @page { size: 100mm 62mm; margin: 0; }
+          * { box-sizing: border-box; }
+          html, body { width: 100mm; height: 62mm; margin: 0; overflow: hidden; }
+          body { font-family: Arial, sans-serif; color: #111; padding: 4mm; }
+          .tag { border: 2px solid #111; padding: 4mm; width: 92mm; height: 54mm; overflow: hidden; }
+          .top { display: flex; justify-content: space-between; align-items: center; border-bottom: 2px solid #111; padding-bottom: 2mm; margin-bottom: 2mm; }
+          .brand { font-size: 12px; font-weight: 800; text-transform: uppercase; }
+          .code { font-size: 27px; line-height: 1; font-weight: 900; letter-spacing: 0.5px; }
+          .row { margin: 1.4mm 0; font-size: 12px; line-height: 1.1; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+          .row strong { display: inline-block; min-width: 22mm; }
+          .equipment { font-size: 16px; line-height: 1.05; font-weight: 800; margin: 2mm 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+          .footer { display: flex; justify-content: space-between; border-top: 1px solid #111; margin-top: 2mm; padding-top: 2mm; font-size: 11px; }
         </style>
       </head>
       <body>
