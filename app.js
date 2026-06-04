@@ -1,5 +1,16 @@
 const STORAGE_KEY = "isprotec-management-v1";
 const SESSION_KEY = "isprotec-session-v1";
+const CLOUD_STATE_ID_DEFAULT = "isprotec-main";
+
+const cloud = {
+  client: null,
+  enabled: false,
+  ready: false,
+  loading: false,
+  saving: false,
+  saveTimer: null,
+  user: null,
+};
 
 const orderStatuses = [
   "Entrada",
@@ -28,6 +39,7 @@ const state = {
   selectedUserIds: new Set(),
   currentUserId: localStorage.getItem(SESSION_KEY) || "",
   data: loadData(),
+  cloud,
 };
 
 const dom = {
@@ -412,8 +424,125 @@ function normalizeUsers(users) {
   });
 }
 
-function saveData(data = state.data) {
+function saveLocalData(data) {
   localStorage.setItem(STORAGE_KEY, JSON.stringify(data));
+}
+
+function saveData(data = state.data) {
+  saveLocalData(data);
+  scheduleCloudSave(data);
+}
+
+function cloudStateId() {
+  return window.ISPROTEC_TENANT_ID || CLOUD_STATE_ID_DEFAULT;
+}
+
+function supabaseConfigured() {
+  const url = String(window.ISPROTEC_SUPABASE_URL || "").trim();
+  const anonKey = String(window.ISPROTEC_SUPABASE_ANON_KEY || "").trim();
+  return Boolean(window.supabase && url && anonKey && !url.includes("SEU-PROJETO") && !anonKey.includes("SUA_CHAVE"));
+}
+
+function getSupabaseClient() {
+  if (!supabaseConfigured()) return null;
+  if (!cloud.client) {
+    cloud.client = window.supabase.createClient(window.ISPROTEC_SUPABASE_URL, window.ISPROTEC_SUPABASE_ANON_KEY);
+  }
+  cloud.enabled = true;
+  return cloud.client;
+}
+
+function ensureCloudUserProfile(authUser, roleOverride = "") {
+  if (!authUser?.email) return null;
+  const email = normalizeText(authUser.email);
+  let user = state.data.users.find((item) => normalizeText(item.email) === email);
+  if (user) {
+    user.status = user.status || "Ativo";
+    return user;
+  }
+
+  user = {
+    id: uid("usr"),
+    name: authUser.user_metadata?.name || authUser.email.split("@")[0],
+    login: authUser.email.split("@")[0],
+    email: authUser.email,
+    role: roleOverride || (state.data.users.length ? "Atendente" : "Administrador"),
+    phone: "",
+    status: "Ativo",
+    password: "",
+  };
+  state.data.users.push(user);
+  saveLocalData(state.data);
+  return user;
+}
+
+async function loadCloudData(authUser) {
+  const client = getSupabaseClient();
+  if (!client || !authUser) return false;
+
+  cloud.loading = true;
+  try {
+    const { data: row, error } = await client
+      .from("app_state")
+      .select("data")
+      .eq("id", cloudStateId())
+      .maybeSingle();
+
+    if (error) throw error;
+
+    if (row?.data) {
+      state.data = migrateData(row.data);
+      ensureCloudUserProfile(authUser);
+      saveLocalData(state.data);
+    } else {
+      ensureCloudUserProfile(authUser, "Administrador");
+      const { error: insertError } = await client.from("app_state").upsert({
+        id: cloudStateId(),
+        data: state.data,
+        updated_at: new Date().toISOString(),
+        updated_by: authUser.id,
+      });
+      if (insertError) throw insertError;
+    }
+
+    cloud.user = authUser;
+    cloud.ready = true;
+    await saveCloudData(state.data);
+    return true;
+  } catch (error) {
+    console.error(error);
+    showToast("NÃ£o foi possÃ­vel carregar os dados online.");
+    return false;
+  } finally {
+    cloud.loading = false;
+  }
+}
+
+function scheduleCloudSave(data) {
+  if (!cloud.enabled || !cloud.ready || cloud.loading || !cloud.user) return;
+  window.clearTimeout(cloud.saveTimer);
+  cloud.saveTimer = window.setTimeout(() => saveCloudData(data), 500);
+}
+
+async function saveCloudData(data = state.data) {
+  const client = getSupabaseClient();
+  if (!client || !cloud.ready || cloud.loading || !cloud.user || cloud.saving) return;
+
+  cloud.saving = true;
+  try {
+    const { error } = await client.from("app_state").upsert({
+      id: cloudStateId(),
+      data,
+      updated_at: new Date().toISOString(),
+      updated_by: cloud.user.id,
+    });
+    if (error) throw error;
+  } catch (error) {
+    console.error(error);
+    showToast("Dados salvos localmente. Falha ao sincronizar online.");
+  } finally {
+    cloud.saving = false;
+  }
 }
 
 function uid(prefix) {
@@ -1778,10 +1907,38 @@ function renderAuthState() {
   return true;
 }
 
-function handleLoginForm(form) {
+async function handleLoginForm(form) {
   const formData = new FormData(form);
   const email = normalizeText(formData.get("email"));
   const password = String(formData.get("password") || "");
+  const client = getSupabaseClient();
+
+  if (client) {
+    const { data, error } = await client.auth.signInWithPassword({
+      email: String(formData.get("email") || "").trim(),
+      password,
+    });
+
+    if (error || !data?.user) {
+      showToast("E-mail ou senha invÃ¡lidos no Supabase.");
+      return;
+    }
+
+    await loadCloudData(data.user);
+    const cloudUser = ensureCloudUserProfile(data.user);
+    if (!cloudUser || cloudUser.status !== "Ativo") {
+      showToast("UsuÃ¡rio inativo. Fale com o administrador.");
+      return;
+    }
+
+    state.currentUserId = cloudUser.id;
+    localStorage.setItem(SESSION_KEY, cloudUser.id);
+    form.reset();
+    if (renderAuthState()) render();
+    showToast(`Bem-vindo, ${cloudUser.name}.`);
+    return;
+  }
+
   const user = state.data.users.find((item) => normalizeText(item.email) === email && item.password === password);
 
   if (!user) {
@@ -1800,7 +1957,11 @@ function handleLoginForm(form) {
   showToast(`Bem-vindo, ${user.name}.`);
 }
 
-function logout() {
+async function logout() {
+  const client = getSupabaseClient();
+  if (client) await client.auth.signOut();
+  cloud.user = null;
+  cloud.ready = false;
   state.currentUserId = "";
   localStorage.removeItem(SESSION_KEY);
   closeModal();
@@ -1808,12 +1969,27 @@ function logout() {
   showToast("Sessão encerrada.");
 }
 
-function initApp() {
+async function initApp() {
   dom.todayLabel.textContent = new Date().toLocaleDateString("pt-BR", {
     weekday: "long",
     day: "2-digit",
     month: "long",
   });
+
+  const client = getSupabaseClient();
+  if (client) {
+    const { data } = await client.auth.getSession();
+    const authUser = data?.session?.user;
+    if (authUser) {
+      await loadCloudData(authUser);
+      const cloudUser = ensureCloudUserProfile(authUser);
+      if (cloudUser?.status === "Ativo") {
+        state.currentUserId = cloudUser.id;
+        localStorage.setItem(SESSION_KEY, cloudUser.id);
+      }
+    }
+  }
+
   if (renderAuthState()) render();
 }
 
