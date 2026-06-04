@@ -2129,11 +2129,15 @@ function openOrderModal(orderId = "") {
             </select>
           </label>
           <label class="field">
-            <label>Técnico</label>
-            <select name="technician">
+            <span class="field-heading">
+              <span>Técnico</span>
+              <button class="mini-btn" type="button" data-action="toggle-inline-technician">+ Novo técnico</button>
+            </span>
+            <select name="technician" id="orderTechnicianSelect">
               ${technicianOptions(order.technician)}
             </select>
           </label>
+          ${renderQuickTechnicianPanel()}
           ${field("createdAt", "Entrada", order.createdAt, "date")}
           ${field("deadline", "Prazo prometido", order.deadline, "date")}
           ${field("scheduledAt", "Agendamento", order.scheduledAt, "date")}
@@ -2307,6 +2311,40 @@ function renderQuickEquipmentPanel() {
   `;
 }
 
+function renderQuickTechnicianPanel() {
+  return `
+    <div class="field full inline-create-panel" id="quickTechnicianPanel" hidden>
+      <div class="inline-create-header">
+        <strong>Novo técnico</strong>
+        <button class="mini-btn" type="button" data-action="toggle-inline-technician">Fechar</button>
+      </div>
+      <div class="inline-form-grid">
+        <label class="field">
+          <label>Nome</label>
+          <input id="quickTechnicianName" type="text" autocomplete="off" />
+        </label>
+        <label class="field">
+          <label>E-mail</label>
+          <input id="quickTechnicianEmail" type="email" autocomplete="off" />
+        </label>
+        <label class="field">
+          <label>Telefone</label>
+          <input id="quickTechnicianPhone" type="text" autocomplete="off" />
+        </label>
+        <label class="field">
+          <label>Senha/PIN inicial</label>
+          <input id="quickTechnicianPassword" type="text" value="1234" autocomplete="off" />
+        </label>
+      </div>
+      <p class="muted">Para este técnico entrar no sistema online, crie o mesmo e-mail também no Supabase.</p>
+      <div class="inline-create-actions">
+        <button class="btn secondary" type="button" data-action="toggle-inline-technician">Cancelar</button>
+        <button class="btn primary" type="button" data-action="save-inline-technician">Salvar técnico e selecionar</button>
+      </div>
+    </div>
+  `;
+}
+
 function toggleInlinePanel(panelId, focusSelector) {
   const panel = document.getElementById(panelId);
   if (!panel) return;
@@ -2326,6 +2364,13 @@ function refreshOrderEquipmentSelect(customerId, selectedId = "") {
   if (!equipmentSelect) return;
   equipmentSelect.innerHTML = equipmentOptions(customerId, selectedId);
   equipmentSelect.value = selectedId;
+}
+
+function refreshOrderTechnicianSelect(selectedName = "") {
+  const technicianSelect = document.getElementById("orderTechnicianSelect");
+  if (!technicianSelect) return;
+  technicianSelect.innerHTML = technicianOptions(selectedName);
+  technicianSelect.value = selectedName;
 }
 
 function saveInlineCustomer() {
@@ -2388,6 +2433,47 @@ function saveInlineEquipment() {
   showToast("Equipamento cadastrado e selecionado.");
 }
 
+function saveInlineTechnician() {
+  const name = document.getElementById("quickTechnicianName")?.value.trim();
+  if (!name) {
+    showToast("Informe o nome do técnico.");
+    return;
+  }
+
+  const emailInput = document.getElementById("quickTechnicianEmail")?.value.trim() || "";
+  const baseLogin = normalizeText(emailInput ? emailInput.split("@")[0] : name).replace(/[^a-z0-9]+/g, ".").replace(/^\.+|\.+$/g, "") || "tecnico";
+  let login = baseLogin;
+  let suffix = 2;
+  while (state.data.users.some((user) => normalizeText(user.login) === normalizeText(login))) {
+    login = `${baseLogin}${suffix}`;
+    suffix += 1;
+  }
+
+  const email = emailInput || `${login}@isprotec.local`;
+  if (state.data.users.some((user) => normalizeText(user.email) === normalizeText(email))) {
+    showToast("Já existe um usuário com esse e-mail.");
+    return;
+  }
+
+  const technician = {
+    id: uid("usr"),
+    name,
+    login,
+    email,
+    phone: document.getElementById("quickTechnicianPhone")?.value.trim() || "",
+    role: "Técnico",
+    status: "Ativo",
+    password: document.getElementById("quickTechnicianPassword")?.value.trim() || "1234",
+  };
+
+  state.data.users.push(technician);
+  saveData();
+  refreshOrderTechnicianSelect(technician.name);
+  clearQuickTechnicianFields();
+  document.getElementById("quickTechnicianPanel").hidden = true;
+  showToast("Técnico cadastrado e selecionado.");
+}
+
 function clearQuickCustomerFields() {
   [
     "quickCustomerName",
@@ -2416,6 +2502,15 @@ function clearQuickEquipmentFields() {
   });
   const counter = document.getElementById("quickEquipmentCounter");
   if (counter) counter.value = "0";
+}
+
+function clearQuickTechnicianFields() {
+  ["quickTechnicianName", "quickTechnicianEmail", "quickTechnicianPhone"].forEach((id) => {
+    const input = document.getElementById(id);
+    if (input) input.value = "";
+  });
+  const password = document.getElementById("quickTechnicianPassword");
+  if (password) password.value = "1234";
 }
 
 function serviceOptions(selectedId) {
@@ -3834,9 +3929,11 @@ document.addEventListener("click", (event) => {
       }
       toggleInlinePanel("quickEquipmentPanel", "#quickEquipmentBrand");
     },
+    "toggle-inline-technician": () => toggleInlinePanel("quickTechnicianPanel", "#quickTechnicianName"),
     "toggle-inline-service": toggleQuickServicePanel,
     "save-inline-customer": saveInlineCustomer,
     "save-inline-equipment": saveInlineEquipment,
+    "save-inline-technician": saveInlineTechnician,
     "save-inline-service": saveInlineService,
     "edit-service-row": () => editServiceFromRow(actionElement.closest("[data-service-row]")),
     "remove-service-row": () => {
