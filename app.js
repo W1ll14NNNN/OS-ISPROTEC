@@ -1,6 +1,7 @@
 const STORAGE_KEY = "isprotec-management-v1";
 const SESSION_KEY = "isprotec-session-v1";
 const CLOUD_STATE_ID_DEFAULT = "isprotec-main";
+const SUPABASE_CDN_URL = "https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2";
 
 const cloud = {
   client: null,
@@ -10,6 +11,7 @@ const cloud = {
   saving: false,
   saveTimer: null,
   user: null,
+  scriptPromise: null,
 };
 
 const orderStatuses = [
@@ -440,11 +442,40 @@ function cloudStateId() {
 function supabaseConfigured() {
   const url = String(window.ISPROTEC_SUPABASE_URL || "").trim();
   const anonKey = String(window.ISPROTEC_SUPABASE_ANON_KEY || "").trim();
-  return Boolean(window.supabase && url && anonKey && !url.includes("SEU-PROJETO") && !anonKey.includes("SUA_CHAVE"));
+  return Boolean(url && anonKey && !url.includes("SEU-PROJETO") && !anonKey.includes("SUA_CHAVE"));
 }
 
-function getSupabaseClient() {
+function validSupabaseUrl() {
+  const url = String(window.ISPROTEC_SUPABASE_URL || "").trim();
+  return /^https:\/\/[a-z0-9-]+\.supabase\.co$/i.test(url);
+}
+
+function loadSupabaseScript() {
+  if (window.supabase) return Promise.resolve(true);
+  if (cloud.scriptPromise) return cloud.scriptPromise;
+
+  cloud.scriptPromise = new Promise((resolve) => {
+    const script = document.createElement("script");
+    script.src = SUPABASE_CDN_URL;
+    script.onload = () => resolve(true);
+    script.onerror = () => resolve(false);
+    document.head.appendChild(script);
+  });
+
+  return cloud.scriptPromise;
+}
+
+async function getSupabaseClient() {
   if (!supabaseConfigured()) return null;
+  if (!validSupabaseUrl()) {
+    showToast("URL do Supabase incorreta. Ela precisa comecar com https:// e terminar com .supabase.co");
+    return null;
+  }
+  const loaded = await loadSupabaseScript();
+  if (!loaded || !window.supabase) {
+    showToast("Supabase nao carregou. Verifique a internet.");
+    return null;
+  }
   if (!cloud.client) {
     cloud.client = window.supabase.createClient(window.ISPROTEC_SUPABASE_URL, window.ISPROTEC_SUPABASE_ANON_KEY);
   }
@@ -477,7 +508,7 @@ function ensureCloudUserProfile(authUser, roleOverride = "") {
 }
 
 async function loadCloudData(authUser) {
-  const client = getSupabaseClient();
+  const client = await getSupabaseClient();
   if (!client || !authUser) return false;
 
   cloud.loading = true;
@@ -525,7 +556,7 @@ function scheduleCloudSave(data) {
 }
 
 async function saveCloudData(data = state.data) {
-  const client = getSupabaseClient();
+  const client = await getSupabaseClient();
   if (!client || !cloud.ready || cloud.loading || !cloud.user || cloud.saving) return;
 
   cloud.saving = true;
@@ -785,7 +816,22 @@ function render() {
     reports: renderReports,
     settings: renderSettings,
   };
-  renderers[state.activeView]();
+  try {
+    renderers[state.activeView]();
+  } catch (error) {
+    console.error(error);
+    const view = document.getElementById(`${state.activeView}View`);
+    if (view) {
+      view.innerHTML = `
+        <div class="panel">
+          <div class="empty-state">
+            Nao foi possivel carregar esta tela. Atualize a pagina ou clique em Sair e entre novamente.
+          </div>
+        </div>
+      `;
+    }
+    showToast("Erro ao carregar a tela atual.");
+  }
 }
 
 function renderDashboard() {
@@ -1911,7 +1957,7 @@ async function handleLoginForm(form) {
   const formData = new FormData(form);
   const email = normalizeText(formData.get("email"));
   const password = String(formData.get("password") || "");
-  const client = getSupabaseClient();
+  const client = await getSupabaseClient();
 
   if (client) {
     const { data, error } = await client.auth.signInWithPassword({
@@ -1958,7 +2004,7 @@ async function handleLoginForm(form) {
 }
 
 async function logout() {
-  const client = getSupabaseClient();
+  const client = await getSupabaseClient();
   if (client) await client.auth.signOut();
   cloud.user = null;
   cloud.ready = false;
@@ -1976,7 +2022,7 @@ async function initApp() {
     month: "long",
   });
 
-  const client = getSupabaseClient();
+  const client = await getSupabaseClient();
   if (client) {
     const { data } = await client.auth.getSession();
     const authUser = data?.session?.user;
@@ -3876,4 +3922,9 @@ dom.modalBackdrop.addEventListener("click", (event) => {
   if (event.target === dom.modalBackdrop) closeModal();
 });
 
-initApp();
+initApp().catch((error) => {
+  console.error(error);
+  dom.appShell.hidden = true;
+  dom.loginScreen.hidden = false;
+  showToast("Erro ao iniciar o sistema.");
+});
