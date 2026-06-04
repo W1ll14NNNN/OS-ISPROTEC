@@ -1,0 +1,20 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 240 240" role="img" aria-label="Isprotec">
+  <defs>
+    <linearGradient id="bg" x1="0" x2="1" y1="0" y2="1">
+      <stop offset="0" stop-color="#18b9c3"/>
+      <stop offset="1" stop-color="#256edb"/>
+    </linearGradient>
+  </defs>
+  <rect width="240" height="240" rx="24" fill="url(#bg)"/>
+  <path d="M78 76h104c12 0 22 10 22 22v48c0 10-8 18-18 18H66c-10 0-18-8-18-18V98c0-12 10-22 22-22h8Z" fill="#171717"/>
+  <path d="M88 50h82c9 0 16 7 16 16v20H72V66c0-9 7-16 16-16Z" fill="#2b2b2b"/>
+  <path d="M74 144h106v42c0 8-6 14-14 14H88c-8 0-14-6-14-14v-42Z" fill="#f8fbff"/>
+  <path d="M90 154h44" stroke="#b9c6d1" stroke-width="7" stroke-linecap="round"/>
+  <path d="M90 174h72" stroke="#dbe5ec" stroke-width="7" stroke-linecap="round"/>
+  <path d="M74 145l-18 34c-2 4 1 9 6 9h21l18-43H74Z" fill="#e1008e"/>
+  <path d="M105 145l-18 43h25l18-43h-25Z" fill="#18b9c3"/>
+  <path d="M136 145l-18 43h25l18-43h-25Z" fill="#256edb"/>
+  <path d="M167 145l-18 43h29c4 0 7-3 7-7v-36h-18Z" fill="#f6c311"/>
+  <circle cx="178" cy="112" r="8" fill="#18b9c3"/>
+  <text x="120" y="226" text-anchor="middle" fill="#fff" font-family="Arial, sans-serif" font-size="24" font-weight="800">ISPROTEC</text>
+</svg>
