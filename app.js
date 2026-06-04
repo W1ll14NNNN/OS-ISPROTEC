@@ -402,6 +402,8 @@ function migrateData(data) {
       paid: 0,
       paymentStatus: "Pendente",
       partsReserved: false,
+      storeTag: defaultOrderTag(order),
+      storeLocation: "",
       services: legacyOrderServices(order),
       history: [],
       ...order,
@@ -710,6 +712,15 @@ function paymentStatus(order) {
   if (balanceOfOrder(order) <= 0 && orderTotal(order) > 0) return "Pago";
   if (Number(order.paid || 0) > 0) return "Parcial";
   return "Pendente";
+}
+
+function defaultOrderTag(order) {
+  const number = order?.number || "";
+  return number ? `TAG-${number}` : "";
+}
+
+function orderStoreTag(order) {
+  return order.storeTag || defaultOrderTag(order);
 }
 
 function statusClass(status) {
@@ -1084,6 +1095,7 @@ function renderOrderCard(order) {
     <article class="order-card">
       <strong>OS ${order.number} - ${escapeHtml(order.title)}</strong>
       <small>${escapeHtml(customerName(order.customerId))}</small>
+      <small><strong>${escapeHtml(orderStoreTag(order))}</strong> ${escapeHtml(order.storeLocation || "")}</small>
       <div class="split-actions">
         <span class="priority-pill ${priorityClass(order.priority)}">${escapeHtml(order.priority)}</span>
         <span class="status-pill ${statusClass(order.status)}">${escapeHtml(order.status)}</span>
@@ -1091,6 +1103,7 @@ function renderOrderCard(order) {
       <div class="actions-row">
         <button class="mini-btn primary" data-action="edit-order" data-id="${order.id}">Abrir</button>
         <button class="mini-btn" data-action="print-order" data-id="${order.id}">Imprimir</button>
+        <button class="mini-btn" data-action="print-tag" data-id="${order.id}">Etiqueta</button>
       </div>
     </article>
   `;
@@ -1127,6 +1140,7 @@ function renderOrdersTable(orders) {
           <tr>
             <th class="check-cell"><input type="checkbox" id="selectAllOrders" ${allVisibleSelected ? "checked" : ""} title="Selecionar todas as OS visíveis" /></th>
             <th>OS</th>
+            <th>Tag</th>
             <th>Cliente</th>
             <th>Equipamento</th>
             <th>Status</th>
@@ -1143,6 +1157,7 @@ function renderOrdersTable(orders) {
                 <tr>
                   <td class="check-cell"><input type="checkbox" data-order-select value="${order.id}" ${state.selectedOrderIds.has(order.id) ? "checked" : ""} title="Selecionar OS ${order.number}" /></td>
                   <td class="nowrap"><strong>${order.number}</strong><br><span class="muted">${escapeHtml(order.priority)}</span></td>
+                  <td class="nowrap"><strong>${escapeHtml(orderStoreTag(order))}</strong><br><span class="muted">${escapeHtml(order.storeLocation || "Sem local")}</span></td>
                   <td>${escapeHtml(customerName(order.customerId))}<br><span class="muted">${escapeHtml(order.title)}</span></td>
                   <td>${escapeHtml(equipmentLabel(order.equipmentId))}</td>
                   <td><span class="status-pill ${statusClass(order.status)}">${escapeHtml(order.status)}</span></td>
@@ -1153,6 +1168,7 @@ function renderOrdersTable(orders) {
                     <div class="actions-row">
                       <button class="mini-btn primary" data-action="edit-order" data-id="${order.id}">Editar</button>
                       <button class="mini-btn" data-action="print-order" data-id="${order.id}">Imprimir</button>
+                      <button class="mini-btn" data-action="print-tag" data-id="${order.id}">Etiqueta</button>
                       <button class="mini-btn success" data-action="receive-order" data-id="${order.id}" ${balanceOfOrder(order) <= 0 ? "disabled" : ""}>Receber</button>
                     </div>
                   </td>
@@ -2045,6 +2061,8 @@ function openOrderModal(orderId = "") {
   const order = existing || {
     id: "",
     number: state.data.settings.nextOrderNumber,
+    storeTag: `TAG-${state.data.settings.nextOrderNumber}`,
+    storeLocation: "Entrada",
     customerId: state.data.customers[0]?.id || "",
     equipmentId: state.data.equipment[0]?.id || "",
     title: "",
@@ -2093,6 +2111,8 @@ function openOrderModal(orderId = "") {
           </label>
           ${renderQuickCustomerPanel()}
           ${renderQuickEquipmentPanel()}
+          ${field("storeTag", "Tag do equipamento", orderStoreTag(order), "text")}
+          ${field("storeLocation", "Local na loja", order.storeLocation || "", "text")}
           ${field("title", "Resumo do defeito", order.title, "text", "full")}
           <label class="field full">
             <label>Relato do cliente</label>
@@ -2162,6 +2182,7 @@ function openOrderModal(orderId = "") {
           </div>
         </div>
         <div class="form-actions">
+          ${existing ? `<button class="btn secondary" type="button" data-action="print-tag" data-id="${order.id}">Imprimir etiqueta</button>` : ""}
           ${existing ? `<button class="btn secondary" type="button" data-action="print-order" data-id="${order.id}">Imprimir</button>` : ""}
           <button class="btn primary" type="submit">Salvar OS</button>
         </div>
@@ -2683,6 +2704,8 @@ function saveOrderFromForm(form) {
     ...(existing || {}),
     id: id || uid("os"),
     number: existing?.number || state.data.settings.nextOrderNumber,
+    storeTag: formData.get("storeTag") || `TAG-${existing?.number || state.data.settings.nextOrderNumber}`,
+    storeLocation: formData.get("storeLocation") || "",
     customerId: formData.get("customerId"),
     equipmentId: formData.get("equipmentId"),
     title: formData.get("title"),
@@ -3333,6 +3356,8 @@ function normalizeImportedOrder(record, usedNumbers, stats) {
   const order = {
     id: uid("os"),
     number,
+    storeTag: stringifyImport(valueByKeys(record, ["storeTag", "tag", "etiqueta", "codigoEtiqueta", "codigo_etiqueta"])) || `TAG-${number}`,
+    storeLocation: stringifyImport(valueByKeys(record, ["storeLocation", "local", "localLoja", "local_loja", "bancada", "prateleira"])),
     customerId: customer.id,
     equipmentId: equipment.id,
     title,
@@ -3650,6 +3675,8 @@ function printOrder(orderId) {
           </div>
           <div>
             <h1>OS ${order.number}</h1>
+            <p><strong>Tag:</strong> ${escapeHtml(orderStoreTag(order))}</p>
+            <p><strong>Local:</strong> ${escapeHtml(order.storeLocation || "-")}</p>
             <p><strong>Entrada:</strong> ${formatDate(order.createdAt)}</p>
             <p><strong>Prazo:</strong> ${formatDate(order.deadline)}</p>
             <p><strong>Status:</strong> ${escapeHtml(order.status)}</p>
@@ -3698,6 +3725,56 @@ function printOrder(orderId) {
   win.document.close();
 }
 
+function printOrderTag(orderId) {
+  const order = state.data.orders.find((item) => item.id === orderId);
+  if (!order) return;
+  const customer = state.data.customers.find((item) => item.id === order.customerId);
+  const equipment = state.data.equipment.find((item) => item.id === order.equipmentId);
+  const tag = orderStoreTag(order);
+  const win = window.open("", "_blank", "width=520,height=420");
+  win.document.write(`
+    <!DOCTYPE html>
+    <html lang="pt-BR">
+      <head>
+        <meta charset="UTF-8" />
+        <title>Etiqueta ${tag}</title>
+        <style>
+          @page { size: 100mm 70mm; margin: 6mm; }
+          body { font-family: Arial, sans-serif; color: #111; margin: 0; }
+          .tag { border: 2px solid #111; padding: 12px; width: 100%; box-sizing: border-box; }
+          .top { display: flex; justify-content: space-between; align-items: center; border-bottom: 2px solid #111; padding-bottom: 8px; margin-bottom: 10px; }
+          .brand { font-size: 14px; font-weight: 800; text-transform: uppercase; }
+          .code { font-size: 30px; font-weight: 900; letter-spacing: 1px; }
+          .row { margin: 7px 0; font-size: 14px; }
+          .row strong { display: inline-block; min-width: 88px; }
+          .equipment { font-size: 18px; font-weight: 800; margin: 8px 0; }
+          .footer { display: flex; justify-content: space-between; border-top: 1px solid #111; margin-top: 10px; padding-top: 8px; font-size: 13px; }
+        </style>
+      </head>
+      <body>
+        <div class="tag">
+          <div class="top">
+            <div class="brand">Isprotec</div>
+            <div class="code">${escapeHtml(tag)}</div>
+          </div>
+          <div class="row"><strong>OS:</strong> ${order.number}</div>
+          <div class="row"><strong>Cliente:</strong> ${escapeHtml(customer?.name || "")}</div>
+          <div class="equipment">${escapeHtml(equipment?.brand || "")} ${escapeHtml(equipment?.model || "")}</div>
+          <div class="row"><strong>Serie:</strong> ${escapeHtml(equipment?.serial || "-")}</div>
+          <div class="row"><strong>Telefone:</strong> ${escapeHtml(customer?.phone || "-")}</div>
+          <div class="row"><strong>Local:</strong> ${escapeHtml(order.storeLocation || "-")}</div>
+          <div class="footer">
+            <span>Entrada: ${formatDate(order.createdAt)}</span>
+            <span>Status: ${escapeHtml(order.status)}</span>
+          </div>
+        </div>
+        <script>window.print();</script>
+      </body>
+    </html>
+  `);
+  win.document.close();
+}
+
 function printReport() {
   window.print();
 }
@@ -3712,6 +3789,7 @@ document.addEventListener("click", (event) => {
     "new-order": () => openOrderModal(),
     "edit-order": () => openOrderModal(id),
     "print-order": () => printOrder(id),
+    "print-tag": () => printOrderTag(id),
     "receive-order": () => openReceiveOrderModal(id),
     "delete-selected-orders": deleteSelectedOrders,
     "new-customer": () => openCustomerModal(),
