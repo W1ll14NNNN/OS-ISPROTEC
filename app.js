@@ -3299,22 +3299,25 @@ function saveReceiveOrder(form) {
   order.paid = Number(order.paid || 0) + amount;
   order.paymentStatus = paymentStatus(order);
   order.history.push({ date: todayISO(), text: `Recebimento registrado: ${formatCurrency(amount)}.` });
+  const paidDate = form.elements.paidDate.value || todayISO();
+  const method = form.elements.method.value || "Pix";
   state.data.transactions.push({
     id: uid("tx"),
     type: "income",
     description: `Recebimento OS ${order.number} - ${customerName(order.customerId)}`,
     category: "Serviços",
     amount,
-    dueDate: form.elements.paidDate.value || todayISO(),
-    paidDate: form.elements.paidDate.value || todayISO(),
+    dueDate: paidDate,
+    paidDate,
     status: "Pago",
-    method: form.elements.method.value || "Pix",
+    method,
     orderId: order.id,
   });
   saveData();
   closeModal();
   render();
   showToast("Recebimento registrado no caixa.");
+  openReceiptPrint(order, amount, paidDate, method);
 }
 
 function payTransaction(txId) {
@@ -3747,7 +3750,10 @@ function printOrder(orderId) {
         <title>OS ${order.number} - Isprotec</title>
         <style>
           body { font-family: Arial, sans-serif; color: #16212c; margin: 28px; }
-          header { display: flex; justify-content: space-between; gap: 20px; border-bottom: 3px solid #18b9c3; padding-bottom: 16px; }
+          .print-header { display: flex; justify-content: space-between; gap: 20px; align-items: flex-start; border-bottom: 3px solid #18b9c3; padding-bottom: 16px; margin-bottom: 20px; }
+          .print-brand { display: flex; align-items: center; gap: 14px; min-width: 0; }
+          .print-logo { width: 64px; height: 64px; object-fit: contain; flex: none; }
+          .print-meta { text-align: right; line-height: 1.4; }
           h1 { margin: 0; font-size: 28px; }
           h2 { margin: 24px 0 8px; font-size: 17px; }
           p { margin: 4px 0; }
@@ -3762,21 +3768,18 @@ function printOrder(orderId) {
         </style>
       </head>
       <body>
-        <header>
-          <div>
-            <h1>${escapeHtml(state.data.settings.companyName)}</h1>
-            <p>${escapeHtml(state.data.settings.address)}</p>
-            <p>${escapeHtml(state.data.settings.phone)} · ${escapeHtml(state.data.settings.email)}</p>
-          </div>
-          <div>
-            <h1>OS ${order.number}</h1>
-            <p><strong>Tag:</strong> ${escapeHtml(orderStoreTag(order))}</p>
-            <p><strong>Local:</strong> ${escapeHtml(order.storeLocation || "-")}</p>
-            <p><strong>Entrada:</strong> ${formatDate(order.createdAt)}</p>
-            <p><strong>Prazo:</strong> ${formatDate(order.deadline)}</p>
-            <p><strong>Status:</strong> ${escapeHtml(order.status)}</p>
-          </div>
-        </header>
+        ${printBrandHeader(
+          state.data.settings.companyName,
+          `${state.data.settings.address} · ${state.data.settings.phone} · ${state.data.settings.email}`,
+          `
+            <div><strong>OS ${order.number}</strong></div>
+            <div>Tag: ${escapeHtml(orderStoreTag(order))}</div>
+            <div>Local: ${escapeHtml(order.storeLocation || "-")}</div>
+            <div>Entrada: ${formatDate(order.createdAt)}</div>
+            <div>Prazo: ${formatDate(order.deadline)}</div>
+            <div>Status: ${escapeHtml(order.status)}</div>
+          `
+        )}
         <section class="grid">
           <div class="box">
             <h2>Cliente</h2>
@@ -3839,8 +3842,9 @@ function printOrderTag(orderId) {
           html, body { width: 100mm; height: 62mm; margin: 0; overflow: hidden; }
           body { font-family: Arial, sans-serif; color: #111; padding: 4mm; }
           .tag { border: 2px solid #111; padding: 4mm; width: 92mm; height: 54mm; overflow: hidden; }
-          .top { display: flex; justify-content: space-between; align-items: center; border-bottom: 2px solid #111; padding-bottom: 2mm; margin-bottom: 2mm; }
-          .brand { font-size: 12px; font-weight: 800; text-transform: uppercase; }
+          .top { display: flex; justify-content: space-between; align-items: center; border-bottom: 2px solid #111; padding-bottom: 2mm; margin-bottom: 2mm; gap: 2mm; }
+          .brand { display: flex; align-items: center; gap: 2mm; min-width: 0; font-size: 12px; font-weight: 800; text-transform: uppercase; }
+          .brand img { width: 16mm; height: 16mm; object-fit: contain; flex: none; }
           .code { font-size: 27px; line-height: 1; font-weight: 900; letter-spacing: 0.5px; }
           .row { margin: 1.2mm 0; font-size: 11.5px; line-height: 1.1; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
           .row strong { display: inline-block; min-width: 22mm; }
@@ -3852,7 +3856,7 @@ function printOrderTag(orderId) {
       <body>
         <div class="tag">
           <div class="top">
-            <div class="brand">Isprotec</div>
+            <div class="brand"><img src="assets/isprotec-logo.svg" alt="Isprotec" /><span>Isprotec</span></div>
             <div class="code">${escapeHtml(tag)}</div>
           </div>
           <div class="row"><strong>OS:</strong> ${order.number}</div>
@@ -3873,8 +3877,187 @@ function printOrderTag(orderId) {
   win.document.close();
 }
 
+function openReportPrint() {
+  const month = state.reportMonth;
+  const totals = financeTotals(month);
+  const ordersInMonth = state.data.orders.filter((order) => monthOf(order.createdAt) === month);
+  const delivered = ordersInMonth.filter((order) => order.status === "Entregue");
+  const paidIncomeTransactions = paidTransactions("income", month);
+  const paidOrderIncome = paidIncomeTransactions.filter((tx) => tx.orderId);
+  const paidOrderIds = new Set(paidOrderIncome.map((tx) => tx.orderId));
+  const paidOrderRevenue = paidOrderIncome.reduce((sum, tx) => sum + Number(tx.amount || 0), 0);
+  const averagePaidTicket = paidOrderRevenue / Math.max(1, paidOrderIds.size);
+  const margin = totals.income ? ((totals.income - totals.expense) / totals.income) * 100 : 0;
+
+  const win = window.open("", "_blank", "width=1100,height=820");
+  win.document.write(`
+    <!DOCTYPE html>
+    <html lang="pt-BR">
+      <head>
+        <meta charset="UTF-8" />
+        <title>Relatório - Isprotec</title>
+        <style>
+          body { font-family: Arial, sans-serif; color: #16212c; margin: 28px; }
+          .print-header { display: flex; justify-content: space-between; align-items: flex-start; gap: 20px; border-bottom: 3px solid #18b9c3; padding-bottom: 16px; margin-bottom: 20px; }
+          .print-brand { display: flex; align-items: center; gap: 14px; min-width: 0; }
+          .print-logo { width: 64px; height: 64px; object-fit: contain; flex: none; }
+          .print-meta { text-align: right; line-height: 1.45; }
+          h1 { margin: 0; font-size: 28px; }
+          h2 { margin: 24px 0 10px; font-size: 18px; }
+          p { margin: 4px 0; }
+          .grid-4 { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 14px; }
+          .metric-card { min-height: 118px; padding: 14px; border: 1px solid #dbe5ec; border-radius: 8px; background: #fff; }
+          .metric-card small { display: block; color: #627282; font-weight: 700; }
+          .metric-card strong { display: block; margin-top: 10px; font-size: 26px; }
+          .metric-card em { display: block; margin-top: 8px; color: #627282; font-style: normal; }
+          .accent-cyan { border-top: 4px solid #18b9c3; }
+          .accent-blue { border-top: 4px solid #256edb; }
+          .accent-magenta { border-top: 4px solid #e1008e; }
+          .accent-yellow { border-top: 4px solid #f6c311; }
+          .grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 18px; margin-top: 18px; }
+          .panel { border: 1px solid #dbe5ec; border-radius: 8px; padding: 16px; background: #fff; }
+          .chart { display: grid; gap: 10px; }
+          .print-note { margin-top: 18px; color: #627282; font-size: 12px; }
+          @media print { body { margin: 16px; } }
+        </style>
+      </head>
+      <body>
+        ${printBrandHeader(
+          state.data.settings.companyName,
+          `${state.data.settings.address} · ${state.data.settings.phone} · ${state.data.settings.email}`,
+          `<div><strong>Relatório mensal</strong></div><div>Mês: ${escapeHtml(month)}</div>`
+        )}
+        <div class="grid-4">
+          <article class="metric-card accent-cyan">
+            <small>OS abertas no mês</small>
+            <strong>${ordersInMonth.length}</strong>
+            <em>${delivered.length} entregue(s)</em>
+          </article>
+          <article class="metric-card accent-blue">
+            <small>Ticket médio pago</small>
+            <strong>${formatCurrency(averagePaidTicket)}</strong>
+            <em>${paidOrderIds.size} OS com recebimento pago</em>
+          </article>
+          <article class="metric-card accent-magenta">
+            <small>Margem do caixa</small>
+            <strong>${margin.toFixed(1)}%</strong>
+            <em>Recebido x despesas pagas</em>
+          </article>
+          <article class="metric-card accent-yellow">
+            <small>Lucro realizado</small>
+            <strong>${formatCurrency(totals.income - totals.expense)}</strong>
+            <em>No mês selecionado</em>
+          </article>
+        </div>
+        <div class="grid-2">
+          <section class="panel">
+            <h2>Receita paga por categoria</h2>
+            <div class="chart">${renderCategoryChart("income", month)}</div>
+          </section>
+          <section class="panel">
+            <h2>Despesas pagas por categoria</h2>
+            <div class="chart">${renderCategoryChart("expense", month)}</div>
+          </section>
+        </div>
+        <section class="panel">
+          <h2>Etapas das OS</h2>
+          <div class="chart">${renderStatusChart()}</div>
+        </section>
+        <p class="print-note">Relatório gerado em ${new Date().toLocaleString("pt-BR")}.</p>
+        <script>window.print();</script>
+      </body>
+    </html>
+  `);
+  win.document.close();
+}
+
 function printReport() {
-  window.print();
+  openReportPrint();
+}
+
+function printBrandHeader(companyName, subtitle = "", extraHtml = "") {
+  return `
+    <header class="print-header">
+      <div class="print-brand">
+        <img src="assets/isprotec-logo.svg" alt="Isprotec" class="print-logo" />
+        <div>
+          <h1>${escapeHtml(companyName)}</h1>
+          ${subtitle ? `<p>${escapeHtml(subtitle)}</p>` : ""}
+        </div>
+      </div>
+      ${extraHtml ? `<div class="print-meta">${extraHtml}</div>` : ""}
+    </header>
+  `;
+}
+
+function openReceiptPrint(order, amount, paidDate, method) {
+  const customer = state.data.customers.find((item) => item.id === order.customerId);
+  const equipment = state.data.equipment.find((item) => item.id === order.equipmentId);
+  const balance = balanceOfOrder(order);
+  const win = window.open("", "_blank", "width=820,height=680");
+  win.document.write(`
+    <!DOCTYPE html>
+    <html lang="pt-BR">
+      <head>
+        <meta charset="UTF-8" />
+        <title>Recibo OS ${order.number} - Isprotec</title>
+        <style>
+          body { font-family: Arial, sans-serif; color: #16212c; margin: 28px; }
+          .print-header { display: flex; justify-content: space-between; gap: 20px; align-items: flex-start; border-bottom: 3px solid #18b9c3; padding-bottom: 16px; margin-bottom: 20px; }
+          .print-brand { display: flex; align-items: center; gap: 14px; min-width: 0; }
+          .print-logo { width: 64px; height: 64px; object-fit: contain; flex: none; }
+          h1 { margin: 0; font-size: 26px; }
+          h2 { margin: 0 0 10px; font-size: 17px; }
+          p { margin: 4px 0; }
+          .print-meta { text-align: right; font-size: 14px; line-height: 1.45; }
+          .grid { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
+          .box { border: 1px solid #dbe5ec; padding: 12px; border-radius: 8px; }
+          .summary { margin-top: 18px; border: 1px solid #dbe5ec; border-radius: 8px; padding: 14px; background: #f8fbfd; }
+          .summary strong { display: inline-block; min-width: 170px; }
+          .footer { margin-top: 40px; display: grid; grid-template-columns: 1fr 1fr; gap: 40px; }
+          .line { border-top: 1px solid #16212c; text-align: center; padding-top: 8px; }
+        </style>
+      </head>
+      <body>
+        ${printBrandHeader(
+          state.data.settings.companyName,
+          state.data.settings.address,
+          `
+            <div><strong>Recibo OS ${order.number}</strong></div>
+            <div>Data: ${formatDate(paidDate)}</div>
+          `
+        )}
+        <section class="grid">
+          <div class="box">
+            <h2>Cliente</h2>
+            <p><strong>${escapeHtml(customer?.name || "")}</strong></p>
+            <p>${escapeHtml(customer?.document || "")}</p>
+            <p>${escapeHtml(customer?.phone || "")}</p>
+            <p>${escapeHtml(customer?.address || "")}</p>
+          </div>
+          <div class="box">
+            <h2>Equipamento</h2>
+            <p><strong>${escapeHtml(equipment?.brand || "")} ${escapeHtml(equipment?.model || "")}</strong></p>
+            <p>Série: ${escapeHtml(equipment?.serial || "")}</p>
+            <p>Tipo: ${escapeHtml(equipment?.type || "")}</p>
+            <p>OS: ${order.number}</p>
+          </div>
+        </section>
+        <section class="summary">
+          <p><strong>Valor recebido:</strong> ${formatCurrency(amount)}</p>
+          <p><strong>Forma de pagamento:</strong> ${escapeHtml(method)}</p>
+          <p><strong>Saldo restante:</strong> ${formatCurrency(balance)}</p>
+          <p><strong>Status financeiro:</strong> ${escapeHtml(order.paymentStatus)}</p>
+        </section>
+        <div class="footer">
+          <div class="line">Cliente</div>
+          <div class="line">Isprotec</div>
+        </div>
+        <script>window.print();</script>
+      </body>
+    </html>
+  `);
+  win.document.close();
 }
 
 document.addEventListener("click", (event) => {
