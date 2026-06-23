@@ -656,6 +656,36 @@ function customerName(id) {
   return state.data.customers.find((customer) => customer.id === id)?.name || "Cliente removido";
 }
 
+function normalizePhoneForWhatsApp(phone) {
+  const digits = String(phone || "").replace(/\D/g, "");
+  if (!digits) return "";
+  return digits.startsWith("55") ? digits : `55${digits}`;
+}
+
+function openOrderWhatsApp(orderId) {
+  const order = state.data.orders.find((item) => item.id === orderId);
+  if (!order) return;
+  const customer = state.data.customers.find((item) => item.id === order.customerId);
+  const phone = normalizePhoneForWhatsApp(customer?.phone);
+  if (!phone) {
+    showToast("Este cliente não tem telefone cadastrado.");
+    return;
+  }
+
+  const lines = [
+    `Olá, ${customer?.name || "cliente"}!`,
+    `Segue a OS ${order.number} da Isprotec.`,
+    `Status: ${order.status}`,
+    `Equipamento: ${equipmentLabel(order.equipmentId)}`,
+    `Defeito: ${order.issue || order.title || "-"}`,
+    `Prazo: ${formatDate(order.deadline)}`,
+    `Total: ${formatCurrency(orderTotal(order))}`,
+  ];
+
+  const url = `https://wa.me/${phone}?text=${encodeURIComponent(lines.join("\n"))}`;
+  window.open(url, "_blank", "noopener");
+}
+
 function equipmentLabel(id) {
   const equipment = state.data.equipment.find((item) => item.id === id);
   if (!equipment) return "Equipamento removido";
@@ -1125,6 +1155,7 @@ function renderOrderCard(order) {
       <div class="actions-row">
         <button class="mini-btn primary" data-action="edit-order" data-id="${order.id}">Abrir</button>
         <button class="mini-btn" data-action="print-order" data-id="${order.id}">Imprimir</button>
+        <button class="mini-btn success" data-action="whatsapp-order" data-id="${order.id}">WhatsApp</button>
         <button class="mini-btn" data-action="print-tag" data-id="${order.id}">Etiqueta</button>
       </div>
     </article>
@@ -1191,6 +1222,7 @@ function renderOrdersTable(orders) {
                       <button class="mini-btn primary" data-action="edit-order" data-id="${order.id}">Editar</button>
                       <button class="mini-btn" data-action="print-order" data-id="${order.id}">Imprimir</button>
                       <button class="mini-btn" data-action="print-tag" data-id="${order.id}">Etiqueta</button>
+                      <button class="mini-btn success" data-action="whatsapp-order" data-id="${order.id}">WhatsApp</button>
                       <button class="mini-btn success" data-action="receive-order" data-id="${order.id}" ${balanceOfOrder(order) <= 0 ? "disabled" : ""}>Receber</button>
                     </div>
                   </td>
@@ -2289,6 +2321,7 @@ function openOrderModal(orderId = "") {
         <div class="form-actions">
           ${existing ? `<button class="btn secondary" type="button" data-action="print-tag" data-id="${order.id}">Imprimir etiqueta</button>` : ""}
           ${existing ? `<button class="btn secondary" type="button" data-action="print-order" data-id="${order.id}">Imprimir</button>` : ""}
+          ${existing ? `<button class="btn success" type="button" data-action="whatsapp-order" data-id="${order.id}">Enviar por WhatsApp</button>` : ""}
           <button class="btn primary" type="submit">Salvar OS</button>
         </div>
       </form>
@@ -4171,6 +4204,7 @@ document.addEventListener("click", (event) => {
     "new-order": () => openOrderModal(),
     "edit-order": () => openOrderModal(id),
     "print-order": () => printOrder(id),
+    "whatsapp-order": () => openOrderWhatsApp(id),
     "print-tag": () => printOrderTag(id),
     "receive-order": () => openReceiveOrderModal(id),
     "delete-selected-orders": deleteSelectedOrders,
