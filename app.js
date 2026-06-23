@@ -682,6 +682,43 @@ function openOrderWhatsApp(orderId) {
     `Total: ${formatCurrency(orderTotal(order))}`,
   ];
 
+  const equipment = state.data.equipment.find((item) => item.id === order.equipmentId);
+  const services = orderServices(order);
+  const parts = order.parts || [];
+  lines.push(
+    "",
+    "Resumo técnico completo:",
+    "Cliente: " + (customer?.name || "-"),
+    "Documento: " + (customer?.document || "-"),
+    "Telefone: " + (customer?.phone || "-"),
+    "E-mail: " + (customer?.email || "-"),
+    "Endereço: " + (customer?.address || "-"),
+    "Tag: " + orderStoreTag(order),
+    "Prioridade: " + order.priority,
+    "Técnico: " + (order.technician || "-"),
+    "Entrada: " + formatDate(order.createdAt),
+    "Agendada: " + (formatDate(order.scheduledAt) || "-"),
+    "Local da OS: " + (order.storeLocation || "-"),
+    "Equipamento: " + equipmentLabel(order.equipmentId),
+    "Série: " + (equipment?.serial || "-"),
+    "Tipo: " + (equipment?.type || "-"),
+    "Local do equipamento: " + (equipment?.location || "-"),
+    "Contador: " + Number(equipment?.counter || 0).toLocaleString("pt-BR"),
+    "Serviços: " + (services.length ? services.map((item) => item.qty + "x " + item.name).join(" | ") : "Nenhum"),
+    "Peças: " + (parts.length ? parts.map((item) => {
+      const part = partById(item.partId);
+      return item.qty + "x " + (part?.name || "Peça removida");
+    }).join(" | ") : "Nenhuma"),
+    "Mão de obra: " + formatCurrency(serviceTotal(order)),
+    "Peças total: " + formatCurrency(parts.reduce((sum, item) => sum + Number(item.qty || 0) * Number(item.price || 0), 0)),
+    "Desconto: " + formatCurrency(order.discount),
+    "Total geral: " + formatCurrency(orderTotal(order)),
+    "Pago: " + formatCurrency(order.paid),
+    "Saldo: " + formatCurrency(balanceOfOrder(order)),
+    "Pagamento: " + paymentStatus(order),
+    "Garantia: " + Number(order.warrantyDays || 0) + " dias"
+  );
+
   const url = `https://wa.me/${phone}?text=${encodeURIComponent(lines.join("\n"))}`;
   window.open(url, "_blank", "noopener");
 }
