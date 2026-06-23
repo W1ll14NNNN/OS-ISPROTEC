@@ -2,6 +2,8 @@ const STORAGE_KEY = "isprotec-management-v1";
 const SESSION_KEY = "isprotec-session-v1";
 const CLOUD_STATE_ID_DEFAULT = "isprotec-main";
 const SUPABASE_CDN_URL = "https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2";
+const DEFAULT_COMPANY_LOGO = "assets/isprotec-logo.svg";
+const MAX_LOGO_FILE_SIZE = 1024 * 1024;
 
 const cloud = {
   client: null,
@@ -77,6 +79,7 @@ function seedData() {
       phone: "(00) 00000-0000",
       email: "atendimento@isprotec.com.br",
       address: "Rua da Assistência, 100 - Centro",
+      logo: DEFAULT_COMPANY_LOGO,
       defaultWarranty: 90,
       nextOrderNumber: 1054,
     },
@@ -628,6 +631,25 @@ function escapeHtml(value) {
     .replaceAll(">", "&gt;")
     .replaceAll('"', "&quot;")
     .replaceAll("'", "&#039;");
+}
+
+function companyLogoSrc() {
+  return state.data.settings?.logo || DEFAULT_COMPANY_LOGO;
+}
+
+function updateCompanyLogos() {
+  document.querySelectorAll(".company-logo").forEach((logo) => {
+    logo.src = companyLogoSrc();
+  });
+}
+
+function readLogoFile(file) {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onload = () => resolve(String(reader.result || ""));
+    reader.onerror = () => reject(new Error("Não foi possível ler a imagem."));
+    reader.readAsDataURL(file);
+  });
 }
 
 function customerName(id) {
@@ -1852,6 +1874,17 @@ function renderSettings() {
             ${field("email", "E-mail", settings.email)}
             ${field("address", "Endereço", settings.address, "text", "full")}
             ${field("defaultWarranty", "Garantia padrão (dias)", settings.defaultWarranty, "number")}
+            <label class="field full">
+              <label>Logo da empresa</label>
+              <div class="logo-upload-control">
+                <img id="companyLogoPreview" src="${escapeHtml(companyLogoSrc())}" alt="Prévia da logo da empresa" />
+                <div class="logo-upload-content">
+                  <input id="companyLogoInput" name="companyLogo" type="file" accept="image/png,image/jpeg,image/webp,image/svg+xml" />
+                  <small>PNG, JPG, WEBP ou SVG. Tamanho máximo: 1 MB.</small>
+                </div>
+                <button class="btn secondary" type="button" data-action="reset-company-logo">Restaurar padrão</button>
+              </div>
+            </label>
             <div class="form-actions field full">
               <button class="btn primary" type="submit">Salvar empresa</button>
             </div>
@@ -1881,6 +1914,72 @@ function renderSettings() {
       </section>
     </div>
   `;
+}
+
+async function saveSettings(settingsForm) {
+  const values = Object.fromEntries(new FormData(settingsForm).entries());
+  delete values.companyLogo;
+
+  const logoFile = settingsForm.elements.companyLogo?.files?.[0];
+  let logo = state.data.settings.logo || DEFAULT_COMPANY_LOGO;
+  if (logoFile) {
+    if (!logoFile.type.startsWith("image/")) {
+      showToast("Selecione um arquivo de imagem válido.");
+      return;
+    }
+    if (logoFile.size > MAX_LOGO_FILE_SIZE) {
+      showToast("A logo deve ter no máximo 1 MB.");
+      return;
+    }
+    try {
+      logo = await readLogoFile(logoFile);
+    } catch (error) {
+      console.error(error);
+      showToast("Não foi possível carregar a logo.");
+      return;
+    }
+  }
+
+  state.data.settings = {
+    ...state.data.settings,
+    ...values,
+    logo,
+    defaultWarranty: Number(settingsForm.elements.defaultWarranty.value || 90),
+  };
+  saveData();
+  updateCompanyLogos();
+  render();
+  showToast("Dados da empresa salvos.");
+}
+
+function resetCompanyLogo() {
+  state.data.settings.logo = DEFAULT_COMPANY_LOGO;
+  saveData();
+  updateCompanyLogos();
+  renderSettings();
+  showToast("Logo padrão restaurada.");
+}
+
+async function previewCompanyLogo(input) {
+  const file = input.files?.[0];
+  if (!file) return;
+  if (!file.type.startsWith("image/")) {
+    input.value = "";
+    showToast("Selecione um arquivo de imagem válido.");
+    return;
+  }
+  if (file.size > MAX_LOGO_FILE_SIZE) {
+    input.value = "";
+    showToast("A logo deve ter no máximo 1 MB.");
+    return;
+  }
+  try {
+    const preview = document.getElementById("companyLogoPreview");
+    if (preview) preview.src = await readLogoFile(file);
+  } catch (error) {
+    console.error(error);
+    showToast("Não foi possível carregar a logo.");
+  }
 }
 
 function renderUsersTable() {
@@ -2037,6 +2136,7 @@ async function initApp() {
     day: "2-digit",
     month: "long",
   });
+  updateCompanyLogos();
 
   const client = await getSupabaseClient();
   if (client) {
@@ -2052,6 +2152,7 @@ async function initApp() {
     }
   }
 
+  updateCompanyLogos();
   if (renderAuthState()) render();
 }
 
@@ -3856,7 +3957,7 @@ function printOrderTag(orderId) {
       <body>
         <div class="tag">
           <div class="top">
-            <div class="brand"><img src="assets/isprotec-logo.svg" alt="Isprotec" /><span>Isprotec</span></div>
+            <div class="brand"><img src="${escapeHtml(companyLogoSrc())}" alt="Isprotec" /><span>Isprotec</span></div>
             <div class="code">${escapeHtml(tag)}</div>
           </div>
           <div class="row"><strong>OS:</strong> ${order.number}</div>
@@ -3979,7 +4080,7 @@ function printBrandHeader(companyName, subtitle = "", extraHtml = "") {
   return `
     <header class="print-header">
       <div class="print-brand">
-        <img src="assets/isprotec-logo.svg" alt="Isprotec" class="print-logo" />
+        <img src="${escapeHtml(companyLogoSrc())}" alt="Isprotec" class="print-logo" />
         <div>
           <h1>${escapeHtml(companyName)}</h1>
           ${subtitle ? `<p>${escapeHtml(subtitle)}</p>` : ""}
@@ -4093,6 +4194,7 @@ document.addEventListener("click", (event) => {
     "export-data": exportData,
     "import-data": () => dom.importDataInput.click(),
     "import-orders": () => dom.importOrdersInput.click(),
+    "reset-company-logo": resetCompanyLogo,
     "seed-demo": () => {
       state.data = seedData();
       saveData();
@@ -4144,16 +4246,7 @@ document.addEventListener("submit", (event) => {
     stockInForm: saveStockIn,
     cashForm: saveCash,
     receiveOrderForm: saveReceiveOrder,
-    settingsForm: (settingsForm) => {
-      state.data.settings = {
-        ...state.data.settings,
-        ...Object.fromEntries(new FormData(settingsForm).entries()),
-        defaultWarranty: Number(settingsForm.elements.defaultWarranty.value || 90),
-      };
-      saveData();
-      render();
-      showToast("Dados da empresa salvos.");
-    },
+    settingsForm: saveSettings,
   };
   handlers[form.id]?.(form);
 });
@@ -4175,6 +4268,9 @@ document.addEventListener("input", (event) => {
 });
 
 document.addEventListener("change", (event) => {
+  if (event.target.id === "companyLogoInput") {
+    previewCompanyLogo(event.target);
+  }
   if (event.target.id === "selectAllOrders") {
     toggleVisibleOrdersSelection(event.target.checked);
   }
