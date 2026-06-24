@@ -22,7 +22,7 @@ function showTrackResult(message, tone = "neutral") {
 
 async function readJson(response) {
   const text = await response.text();
-  if (!text) return { message: "O serviço não retornou uma resposta. Atualize o deploy no Netlify e tente novamente." };
+  if (!text) return { message: "O serviço não retornou uma resposta. Atualize a publicação e tente novamente." };
   try {
     return JSON.parse(text);
   } catch {
@@ -52,7 +52,7 @@ function renderTrackedOrder(order) {
 
 async function trackOrder(payload) {
   showTrackResult("Consultando sua ordem de serviço...", "neutral");
-  const response = await fetch("/.netlify/functions/track-order", {
+  const response = await fetch("/api/track-order", {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify(payload),
@@ -90,7 +90,7 @@ trackResult?.addEventListener("click", async (event) => {
 
   trackResult.querySelectorAll("button").forEach((item) => { item.disabled = true; });
   try {
-    const response = await fetch("/.netlify/functions/respond-approval", {
+    const response = await fetch("/api/respond-approval", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ ...trackedCredentials, decision }),
@@ -112,7 +112,7 @@ appointmentForm?.addEventListener("submit", async (event) => {
   submitButton.disabled = true;
   appointmentFeedback.textContent = "Enviando sua solicitação...";
   try {
-    const response = await fetch("/.netlify/functions/request-appointment", {
+    const response = await fetch("/api/request-appointment", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify(payload),
