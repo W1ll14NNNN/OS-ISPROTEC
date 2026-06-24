@@ -3,125 +3,146 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Isprotec Assistência Técnica</title>
-  <link rel="stylesheet" href="styles.css" />
+  <meta name="description" content="ISPROTEC: assistência técnica em impressoras, peças, limpeza, recarga e toner em Trindade-GO." />
+  <title>ISPROTEC | Assistência Técnica em Impressoras</title>
+  <link rel="stylesheet" href="site.css" />
 </head>
 <body>
-  <section class="login-screen" id="loginScreen">
-    <div class="login-card">
-      <div class="login-brand">
-        <div class="brand-logo">
-          <img class="company-logo" src="assets/isprotec-logo.svg" alt="Isprotec" onerror="this.style.display='none'" />
-          <span class="brand-fallback">IP</span>
+  <header class="site-header">
+    <a class="site-brand" href="#inicio" aria-label="ISPROTEC, início">
+      <img src="assets/isprotec-logo.svg" alt="" />
+      <span>IS<span>PROTEC</span></span>
+    </a>
+    <nav aria-label="Navegação principal">
+      <a href="#servicos">Serviços</a>
+      <a href="#acompanhar">Acompanhar OS</a>
+      <a href="#agendar">Agendar</a>
+      <a href="#contato">Contato</a>
+    </nav>
+    <a class="header-action" href="sistema.html" title="Área interna">
+      <i data-lucide="lock-keyhole"></i><span>Área interna</span>
+    </a>
+  </header>
+
+  <main>
+    <section class="hero" id="inicio">
+      <div class="hero-image" role="img" aria-label="Identidade visual da ISPROTEC"></div>
+      <div class="hero-shade"></div>
+      <div class="hero-content">
+        <p class="kicker">Trindade, Goiás</p>
+        <h1>Assistência que deixa sua impressão pronta para trabalhar.</h1>
+        <p class="hero-copy">Manutenção, limpeza, peças, recarga e toner para impressoras de empresas e residências.</p>
+        <div class="hero-actions">
+          <a class="button primary" href="#agendar"><i data-lucide="calendar-plus"></i>Agendar atendimento</a>
+          <a class="button outline" href="#acompanhar"><i data-lucide="search-check"></i>Acompanhar minha OS</a>
         </div>
-        <div>
-          <strong>Isprotec</strong>
-          <small>Assistência Técnica em Impressoras</small>
+        <div class="hero-details">
+          <span><i data-lucide="clock-3"></i>Segunda a sexta, 8h às 18h</span>
+          <a href="https://wa.me/5562996516079" target="_blank" rel="noopener"><i data-lucide="message-circle"></i>(62) 99651-6079</a>
         </div>
       </div>
-      <form id="loginForm" class="login-form">
-        <div>
-          <p class="eyebrow">Acesso ao sistema</p>
-          <h1>Entrar</h1>
-        </div>
-        <label class="field">
-          <label>E-mail</label>
-          <input name="email" type="email" autocomplete="username" required />
+    </section>
+
+    <section class="service-band" id="servicos" aria-labelledby="services-title">
+      <div class="section-heading">
+        <p class="kicker">Serviços ISPROTEC</p>
+        <h2 id="services-title">Solução completa para sua impressora</h2>
+      </div>
+      <div class="services-grid">
+        <article>
+          <i data-lucide="wrench"></i>
+          <h3>Manutenção</h3>
+          <p>Reparo técnico e manutenção preventiva para evitar paradas.</p>
+        </article>
+        <article>
+          <i data-lucide="sparkles"></i>
+          <h3>Limpeza</h3>
+          <p>Limpeza interna, calibração e revisão do equipamento.</p>
+        </article>
+        <article>
+          <i data-lucide="settings-2"></i>
+          <h3>Peças</h3>
+          <p>Reposição de componentes e acessórios para diversas marcas.</p>
+        </article>
+        <article>
+          <i data-lucide="droplets"></i>
+          <h3>Recarga</h3>
+          <p>Recarga e suporte para cartuchos e sistemas de tinta.</p>
+        </article>
+        <article>
+          <i data-lucide="printer"></i>
+          <h3>Toner</h3>
+          <p>Venda e troca de toners para manter sua operação ativa.</p>
+        </article>
+      </div>
+    </section>
+
+    <section class="portal-section" id="acompanhar">
+      <div class="section-heading">
+        <p class="kicker">Portal do cliente</p>
+        <h2>Acompanhe o status do seu equipamento</h2>
+        <p>Informe o número da OS e o telefone cadastrado para consultar o andamento.</p>
+      </div>
+      <form class="portal-form" id="trackOrderForm">
+        <label>
+          Número da OS
+          <input name="orderNumber" inputmode="numeric" placeholder="Ex.: 1054" required />
         </label>
-        <label class="field">
-          <label>Senha</label>
-          <input name="password" type="password" autocomplete="current-password" required />
+        <label>
+          Telefone cadastrado
+          <input name="phone" inputmode="tel" placeholder="(62) 99999-9999" required />
         </label>
-        <button class="btn primary" type="submit">Entrar no sistema</button>
+        <button class="button primary" type="submit"><i data-lucide="search"></i>Consultar status</button>
       </form>
-    </div>
-  </section>
+      <div class="result-panel" id="trackOrderResult" hidden aria-live="polite"></div>
+    </section>
 
-  <div class="app-shell" id="appShell" hidden>
-    <aside class="sidebar">
-      <div class="brand">
-        <div class="brand-logo">
-          <img class="company-logo" src="assets/isprotec-logo.svg" alt="Isprotec" onerror="this.style.display='none'" />
-          <span class="brand-fallback">IP</span>
-        </div>
-        <div>
-          <strong>Isprotec</strong>
-          <small>Assistência em Impressoras</small>
-        </div>
+    <section class="appointment-section" id="agendar">
+      <div class="appointment-copy">
+        <p class="kicker">Agendamento online</p>
+        <h2>Solicite seu atendimento</h2>
+        <p>Envie os dados do equipamento e a melhor data. A equipe da ISPROTEC confirma o atendimento pelo WhatsApp.</p>
+        <a class="whatsapp-link" href="https://wa.me/5562996516079?text=Olá!%20Gostaria%20de%20agendar%20um%20atendimento." target="_blank" rel="noopener"><i data-lucide="message-circle"></i>Falar no WhatsApp</a>
       </div>
+      <form class="appointment-form" id="appointmentForm">
+        <div class="form-grid">
+          <label>Nome completo<input name="name" autocomplete="name" required /></label>
+          <label>WhatsApp<input name="phone" inputmode="tel" autocomplete="tel" required /></label>
+          <label>E-mail<input name="email" type="email" autocomplete="email" /></label>
+          <label>Data desejada<input name="preferredDate" type="date" required /></label>
+          <label>Marca da impressora<input name="brand" placeholder="Ex.: Epson" required /></label>
+          <label>Modelo<input name="model" placeholder="Ex.: L3250" required /></label>
+          <label class="full">Endereço do atendimento<input name="address" autocomplete="street-address" required /></label>
+          <label class="full">Problema relatado<textarea name="issue" rows="4" placeholder="Conte o que está acontecendo com a impressora." required></textarea></label>
+        </div>
+        <button class="button primary" type="submit"><i data-lucide="send"></i>Solicitar agendamento</button>
+        <p class="form-feedback" id="appointmentFeedback" aria-live="polite"></p>
+      </form>
+    </section>
 
-      <nav class="nav-list" aria-label="Menu principal">
-        <button class="nav-item active" data-view="dashboard"><span>⌂</span>Painel</button>
-        <button class="nav-item" data-view="orders"><span>OS</span>Ordens de Serviço</button>
-        <button class="nav-item" data-view="schedule"><span>◷</span>Agenda</button>
-        <button class="nav-item" data-view="customers"><span>☷</span>Clientes</button>
-        <button class="nav-item" data-view="inventory"><span>▦</span>Estoque</button>
-        <button class="nav-item" data-view="finance"><span>R$</span>Fluxo de Caixa</button>
-        <button class="nav-item" data-view="reports"><span>▥</span>Relatórios</button>
-        <button class="nav-item" data-view="settings"><span>⚙</span>Configurações</button>
-      </nav>
-
-      <div class="sidebar-footer">
-        <small>Operação</small>
-        <strong id="todayLabel">Hoje</strong>
+    <section class="contact-section" id="contato">
+      <div class="contact-info">
+        <p class="kicker">Onde estamos</p>
+        <h2>Atendimento técnico em Trindade-GO</h2>
+        <address>R. Bom Jardim, Qd 38, Lt 17 - Maysa 1<br />Trindade - GO, 75380-316</address>
+        <p><i data-lucide="clock-3"></i>Segunda a sexta, das 8h às 18h</p>
+        <a class="button dark" href="https://www.google.com/maps/place/ISPROTEC+ASSISTENCIA+TECNICA+EM+IMPRESSORAS+E+PE%C3%87AS+PARA+IMPRESSORAS/data=!4m7!3m6!1s0x935ef407e1a07cf9:0xccba2afe48fe81f4!8m2!3d-16.6357607!4d-49.3899973!16s%2Fg%2F1tcws6rs" target="_blank" rel="noopener"><i data-lucide="map-pin"></i>Ver no Google Maps</a>
       </div>
-    </aside>
-
-    <div class="workspace">
-      <header class="topbar">
-        <div>
-          <p class="eyebrow">Sistema de gerenciamento</p>
-          <h1 id="viewTitle">Painel</h1>
-        </div>
-        <div class="topbar-actions">
-          <label class="search-box" for="globalSearch">
-            <span>⌕</span>
-            <input id="globalSearch" type="search" placeholder="Buscar OS, cliente, equipamento..." autocomplete="off" />
-          </label>
-          <button class="btn ghost" id="exportDataBtn" title="Exportar backup">⇩</button>
-          <div class="user-chip" id="currentUserChip">
-            <span id="currentUserInitial">U</span>
-            <div>
-              <strong id="currentUserName">Usuário</strong>
-              <small id="currentUserRole">Função</small>
-            </div>
-          </div>
-          <button class="btn ghost" data-action="logout">Sair</button>
-          <button class="btn primary" id="newOrderBtn"><span>+</span>Nova OS</button>
-        </div>
-      </header>
-
-      <main>
-        <section id="dashboardView" class="view active"></section>
-        <section id="ordersView" class="view"></section>
-        <section id="scheduleView" class="view"></section>
-        <section id="customersView" class="view"></section>
-        <section id="inventoryView" class="view"></section>
-        <section id="financeView" class="view"></section>
-        <section id="reportsView" class="view"></section>
-        <section id="settingsView" class="view"></section>
-      </main>
-    </div>
-  </div>
-
-  <div class="modal-backdrop" id="modalBackdrop" hidden>
-    <div class="modal" role="dialog" aria-modal="true" aria-labelledby="modalTitle">
-      <div class="modal-header">
-        <div>
-          <p class="eyebrow" id="modalKicker">Registro</p>
-          <h2 id="modalTitle">Nova OS</h2>
-        </div>
-        <button class="icon-btn" id="closeModalBtn" title="Fechar">×</button>
+      <div class="map-frame">
+        <img src="assets/isprotec-location.png" alt="Informações e localização da ISPROTEC no Google" />
+        <a class="map-overlay" href="https://www.google.com/maps/place/ISPROTEC+ASSISTENCIA+TECNICA+EM+IMPRESSORAS+E+PE%C3%87AS+PARA+IMPRESSORAS/data=!4m7!3m6!1s0x935ef407e1a07cf9:0xccba2afe48fe81f4!8m2!3d-16.6357607!4d-49.3899973!16s%2Fg%2F1tcws6rs" target="_blank" rel="noopener">Abrir rotas</a>
       </div>
-      <div id="modalBody"></div>
-    </div>
-  </div>
+    </section>
+  </main>
 
-  <div class="toast" id="toast" aria-live="polite"></div>
+  <footer>
+    <img src="assets/isprotec-logo.svg" alt="" />
+    <span>ISPROTEC Assistência Técnica em Impressoras</span>
+    <a href="sistema.html">Acesso ao sistema</a>
+  </footer>
 
-  <input id="importDataInput" type="file" accept="application/json" hidden />
-  <input id="importOrdersInput" type="file" accept="application/json" hidden />
-  <script src="supabase-config.js"></script>
-  <script src="app.js"></script>
+  <a class="floating-whatsapp" href="https://wa.me/5562996516079" target="_blank" rel="noopener" aria-label="Falar com a ISPROTEC pelo WhatsApp"><i data-lucide="message-circle"></i></a>
+
+  <script src="site.js"></script>
 </body>
 </html>

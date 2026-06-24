@@ -1,0 +1,127 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Isprotec Assistência Técnica</title>
+  <link rel="stylesheet" href="styles.css" />
+</head>
+<body>
+  <section class="login-screen" id="loginScreen">
+    <div class="login-card">
+      <div class="login-brand">
+        <div class="brand-logo">
+          <img class="company-logo" src="assets/isprotec-logo.svg" alt="Isprotec" onerror="this.style.display='none'" />
+          <span class="brand-fallback">IP</span>
+        </div>
+        <div>
+          <strong>Isprotec</strong>
+          <small>Assistência Técnica em Impressoras</small>
+        </div>
+      </div>
+      <form id="loginForm" class="login-form">
+        <div>
+          <p class="eyebrow">Acesso ao sistema</p>
+          <h1>Entrar</h1>
+        </div>
+        <label class="field">
+          <label>E-mail</label>
+          <input name="email" type="email" autocomplete="username" required />
+        </label>
+        <label class="field">
+          <label>Senha</label>
+          <input name="password" type="password" autocomplete="current-password" required />
+        </label>
+        <button class="btn primary" type="submit">Entrar no sistema</button>
+      </form>
+    </div>
+  </section>
+
+  <div class="app-shell" id="appShell" hidden>
+    <aside class="sidebar">
+      <div class="brand">
+        <div class="brand-logo">
+          <img class="company-logo" src="assets/isprotec-logo.svg" alt="Isprotec" onerror="this.style.display='none'" />
+          <span class="brand-fallback">IP</span>
+        </div>
+        <div>
+          <strong>Isprotec</strong>
+          <small>Assistência em Impressoras</small>
+        </div>
+      </div>
+
+      <nav class="nav-list" aria-label="Menu principal">
+        <button class="nav-item active" data-view="dashboard"><span>⌂</span>Painel</button>
+        <button class="nav-item" data-view="orders"><span>OS</span>Ordens de Serviço</button>
+        <button class="nav-item" data-view="schedule"><span>◷</span>Agenda</button>
+        <button class="nav-item" data-view="customers"><span>☷</span>Clientes</button>
+        <button class="nav-item" data-view="inventory"><span>▦</span>Estoque</button>
+        <button class="nav-item" data-view="finance"><span>R$</span>Fluxo de Caixa</button>
+        <button class="nav-item" data-view="reports"><span>▥</span>Relatórios</button>
+        <button class="nav-item" data-view="settings"><span>⚙</span>Configurações</button>
+      </nav>
+
+      <div class="sidebar-footer">
+        <small>Operação</small>
+        <strong id="todayLabel">Hoje</strong>
+      </div>
+    </aside>
+
+    <div class="workspace">
+      <header class="topbar">
+        <div>
+          <p class="eyebrow">Sistema de gerenciamento</p>
+          <h1 id="viewTitle">Painel</h1>
+        </div>
+        <div class="topbar-actions">
+          <label class="search-box" for="globalSearch">
+            <span>⌕</span>
+            <input id="globalSearch" type="search" placeholder="Buscar OS, cliente, equipamento..." autocomplete="off" />
+          </label>
+          <button class="btn ghost" id="exportDataBtn" title="Exportar backup">⇩</button>
+          <div class="user-chip" id="currentUserChip">
+            <span id="currentUserInitial">U</span>
+            <div>
+              <strong id="currentUserName">Usuário</strong>
+              <small id="currentUserRole">Função</small>
+            </div>
+          </div>
+          <button class="btn ghost" data-action="logout">Sair</button>
+          <button class="btn primary" id="newOrderBtn"><span>+</span>Nova OS</button>
+        </div>
+      </header>
+
+      <main>
+        <section id="dashboardView" class="view active"></section>
+        <section id="ordersView" class="view"></section>
+        <section id="scheduleView" class="view"></section>
+        <section id="customersView" class="view"></section>
+        <section id="inventoryView" class="view"></section>
+        <section id="financeView" class="view"></section>
+        <section id="reportsView" class="view"></section>
+        <section id="settingsView" class="view"></section>
+      </main>
+    </div>
+  </div>
+
+  <div class="modal-backdrop" id="modalBackdrop" hidden>
+    <div class="modal" role="dialog" aria-modal="true" aria-labelledby="modalTitle">
+      <div class="modal-header">
+        <div>
+          <p class="eyebrow" id="modalKicker">Registro</p>
+          <h2 id="modalTitle">Nova OS</h2>
+        </div>
+        <button class="icon-btn" id="closeModalBtn" title="Fechar">×</button>
+      </div>
+      <div id="modalBody"></div>
+    </div>
+  </div>
+
+  <div class="toast" id="toast" aria-live="polite"></div>
+
+  <input id="importDataInput" type="file" accept="application/json" hidden />
+  <input id="importOrdersInput" type="file" accept="application/json" hidden />
+  <script src="supabase-config.js"></script>
+  <script src="app.js"></script>
+</body>
+</html>
