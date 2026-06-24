@@ -20,6 +20,16 @@ function showTrackResult(message, tone = "neutral") {
   trackResult.innerHTML = message;
 }
 
+async function readJson(response) {
+  const text = await response.text();
+  if (!text) return { message: "O serviço não retornou uma resposta. Atualize o deploy no Netlify e tente novamente." };
+  try {
+    return JSON.parse(text);
+  } catch {
+    return { message: "O serviço retornou um erro inesperado (" + response.status + ")." };
+  }
+}
+
 function renderQuoteItems(items) {
   if (!items?.length) return "<li>Nenhum item informado.</li>";
   return items.map((item) => "<li><span>" + escapeHtml(item.qty) + "x " + escapeHtml(item.name) + "</span><strong>" + money(item.total) + "</strong></li>").join("");
@@ -47,7 +57,7 @@ async function trackOrder(payload) {
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify(payload),
   });
-  const data = await response.json();
+  const data = await readJson(response);
   if (!response.ok) throw new Error(data.message || "Não foi possível localizar a OS.");
   trackedCredentials = payload;
   showTrackResult(renderTrackedOrder(data.order), "success");
@@ -85,7 +95,7 @@ trackResult?.addEventListener("click", async (event) => {
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ ...trackedCredentials, decision }),
     });
-    const data = await response.json();
+    const data = await readJson(response);
     if (!response.ok) throw new Error(data.message || "Não foi possível registrar sua decisão.");
     showTrackResult("<strong>OS " + escapeHtml(data.order.number) + " - " + escapeHtml(data.order.status) + "</strong><span>" + escapeHtml(data.order.message) + "</span>", "success");
   } catch (error) {
@@ -107,7 +117,7 @@ appointmentForm?.addEventListener("submit", async (event) => {
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify(payload),
     });
-    const data = await response.json();
+    const data = await readJson(response);
     if (!response.ok) throw new Error(data.message || "Não foi possível enviar o agendamento.");
 
     appointmentForm.reset();
