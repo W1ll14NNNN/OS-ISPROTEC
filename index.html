@@ -108,6 +108,78 @@
       </div>
     </section>
 
+    <section class="products-section" id="produtos" aria-labelledby="products-title">
+      <div class="section-heading">
+        <p class="kicker">Loja ISPROTEC</p>
+        <h2 id="products-title">Produtos para venda e reposição</h2>
+        <p>Escolha um item e siga por orçamento ou pagamento. O pedido entra no sistema e a equipe finaliza o atendimento.</p>
+      </div>
+      <div class="products-grid" aria-label="Produtos disponíveis para venda">
+        <article class="product-card">
+          <img src="assets/isprotec-products.png" alt="Impressora e suprimentos da ISPROTEC" />
+          <div>
+            <p class="product-tag">Mais procurado</p>
+            <h3>Impressoras</h3>
+            <p>Equipamentos para escritório, gráfica rápida e uso doméstico.</p>
+            <strong>A partir de R$ 899,00</strong>
+          </div>
+          <button class="button primary" type="button" data-product-preset="Impressoras" data-request-mode="budget">Pedir orçamento</button>
+          <button class="button outline" type="button" data-product-preset="Impressoras" data-request-mode="payment">Pagar agora</button>
+        </article>
+        <article class="product-card">
+          <img src="assets/isprotec-products.png" alt="Toners e cartuchos para impressoras" />
+          <div>
+            <p class="product-tag">Reposição</p>
+            <h3>Toners e cartuchos</h3>
+            <p>Modelos compatíveis e originais para diversos equipamentos.</p>
+            <strong>A partir de R$ 69,00</strong>
+          </div>
+          <button class="button primary" type="button" data-product-preset="Toners e cartuchos" data-request-mode="budget">Pedir orçamento</button>
+          <button class="button outline" type="button" data-product-preset="Toners e cartuchos" data-request-mode="payment">Pagar agora</button>
+        </article>
+        <article class="product-card">
+          <img src="assets/isprotec-products.png" alt="Refis de tinta e manutenção de impressora" />
+          <div>
+            <p class="product-tag">Linha tinta</p>
+            <h3>Refis de tinta</h3>
+            <p>Refil para tanques, manutenção e suporte para impressão contínua.</p>
+            <strong>A partir de R$ 39,00</strong>
+          </div>
+          <button class="button primary" type="button" data-product-preset="Refis de tinta" data-request-mode="budget">Pedir orçamento</button>
+          <button class="button outline" type="button" data-product-preset="Refis de tinta" data-request-mode="payment">Pagar agora</button>
+        </article>
+        <article class="product-card">
+          <img src="assets/isprotec-products.png" alt="Peças e suprimentos para impressoras" />
+          <div>
+            <p class="product-tag">Peças</p>
+            <h3>Peças e acessórios</h3>
+            <p>Itens para manutenção, troca e reposição técnica.</p>
+            <strong>Sob consulta</strong>
+          </div>
+          <button class="button primary" type="button" data-product-preset="Peças e acessórios" data-request-mode="budget">Pedir orçamento</button>
+          <button class="button outline" type="button" data-product-preset="Peças e acessórios" data-request-mode="payment">Pagar agora</button>
+        </article>
+      </div>
+      <form class="product-order-form" id="productOrderForm">
+        <div class="form-grid">
+          <label>Produto selecionado<input name="product" id="productName" required /></label>
+          <label>Quantidade<input name="quantity" id="productQuantity" type="number" min="1" value="1" required /></label>
+          <label>Nome completo<input name="name" autocomplete="name" required /></label>
+          <label>WhatsApp<input name="phone" inputmode="tel" autocomplete="tel" required /></label>
+          <label>E-mail<input name="email" type="email" autocomplete="email" /></label>
+          <label>Tipo de solicitação
+            <select name="requestType" id="productRequestType" required>
+              <option value="budget">Orçamento</option>
+              <option value="payment">Pagamento</option>
+            </select>
+          </label>
+          <label class="full">Observações<textarea name="notes" rows="4" placeholder="Se quiser, adicione modelo, cor, voltagem ou detalhes do pedido."></textarea></label>
+        </div>
+        <button class="button primary" type="submit"><i data-lucide="shopping-cart"></i>Enviar pedido</button>
+        <p class="form-feedback" id="productFeedback" aria-live="polite"></p>
+      </form>
+    </section>
+
     <section class="portal-section" id="acompanhar">
       <div class="section-heading">
         <p class="kicker">Portal do cliente</p>

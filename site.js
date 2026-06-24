@@ -2,6 +2,11 @@ const trackForm = document.getElementById("trackOrderForm");
 const trackResult = document.getElementById("trackOrderResult");
 const appointmentForm = document.getElementById("appointmentForm");
 const appointmentFeedback = document.getElementById("appointmentFeedback");
+const productOrderForm = document.getElementById("productOrderForm");
+const productFeedback = document.getElementById("productFeedback");
+const productName = document.getElementById("productName");
+const productQuantity = document.getElementById("productQuantity");
+const productRequestType = document.getElementById("productRequestType");
 
 let trackedCredentials = null;
 
@@ -124,6 +129,45 @@ appointmentForm?.addEventListener("submit", async (event) => {
     appointmentFeedback.textContent = "Solicitação recebida. Sua OS é " + data.orderNumber + ". A equipe confirmará pelo WhatsApp.";
   } catch (error) {
     appointmentFeedback.textContent = error.message || "Não foi possível enviar. Chame a ISPROTEC pelo WhatsApp.";
+  } finally {
+    submitButton.disabled = false;
+  }
+});
+
+document.querySelectorAll("[data-product-preset]").forEach((button) => {
+  button.addEventListener("click", () => {
+    if (productName) productName.value = button.dataset.productPreset || "";
+    if (productQuantity) productQuantity.value = "1";
+    if (productRequestType) productRequestType.value = button.dataset.requestMode || "budget";
+    productOrderForm?.scrollIntoView({ behavior: "smooth", block: "start" });
+  });
+});
+
+productOrderForm?.addEventListener("submit", async (event) => {
+  event.preventDefault();
+  const submitButton = productOrderForm.querySelector('button[type="submit"]');
+  const payload = Object.fromEntries(new FormData(productOrderForm).entries());
+  payload.phone = digitsOnly(payload.phone);
+  payload.quantity = Number(payload.quantity || 1);
+
+  submitButton.disabled = true;
+  productFeedback.textContent = payload.requestType === "payment" ? "Preparando seu pedido para pagamento..." : "Enviando seu pedido para orçamento...";
+
+  try {
+    const response = await fetch("/api/product-request", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(payload),
+    });
+    const data = await readJson(response);
+    if (!response.ok) throw new Error(data.message || "Não foi possível registrar o pedido.");
+
+    productOrderForm.reset();
+    productQuantity.value = "1";
+    productRequestType.value = "budget";
+    productFeedback.textContent = data.message || "Pedido enviado com sucesso.";
+  } catch (error) {
+    productFeedback.textContent = error.message || "Não foi possível registrar o pedido.";
   } finally {
     submitButton.disabled = false;
   }
