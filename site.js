@@ -3,7 +3,10 @@ const trackResult = document.getElementById("trackOrderResult");
 const appointmentForm = document.getElementById("appointmentForm");
 const appointmentFeedback = document.getElementById("appointmentFeedback");
 
+let trackedCredentials = null;
+
 const digitsOnly = (value) => String(value || "").replace(/\D/g, "");
+const money = (value) => Number(value || 0).toLocaleString("pt-BR", { style: "currency", currency: "BRL" });
 const escapeHtml = (value) => String(value ?? "")
   .replaceAll("&", "&amp;")
   .replaceAll("<", "&lt;")
@@ -17,6 +20,39 @@ function showTrackResult(message, tone = "neutral") {
   trackResult.innerHTML = message;
 }
 
+function renderQuoteItems(items) {
+  if (!items?.length) return "<li>Nenhum item informado.</li>";
+  return items.map((item) => "<li><span>" + escapeHtml(item.qty) + "x " + escapeHtml(item.name) + "</span><strong>" + money(item.total) + "</strong></li>").join("");
+}
+
+function renderTrackedOrder(order) {
+  const quote = order.quote || {};
+  const approvalActions = order.canRespond
+    ? "<div class=\"approval-actions\"><p>O orçamento está aguardando sua resposta.</p><button class=\"button primary\" type=\"button\" data-approval=\"approve\">Aprovar orçamento</button><button class=\"button danger\" type=\"button\" data-approval=\"reject\">Não aprovar</button></div>"
+    : "";
+
+  return "<strong>OS " + escapeHtml(order.number) + " - " + escapeHtml(order.status) + "</strong>" +
+    "<span>Equipamento: " + escapeHtml(order.equipment) + "</span>" +
+    "<span>Prazo: " + escapeHtml(order.deadline) + "</span>" +
+    "<span>Atualização: " + escapeHtml(order.lastUpdate) + "</span>" +
+    "<div class=\"technical-summary\"><h3>Informações técnicas</h3><p><strong>Defeito:</strong> " + escapeHtml(order.issue) + "</p><p><strong>Diagnóstico:</strong> " + escapeHtml(order.diagnosis) + "</p><p><strong>Solução:</strong> " + escapeHtml(order.solution) + "</p></div>" +
+    "<div class=\"quote-summary\"><h3>Orçamento</h3><div><h4>Serviços</h4><ul>" + renderQuoteItems(quote.services) + "</ul></div><div><h4>Peças</h4><ul>" + renderQuoteItems(quote.parts) + "</ul></div><p class=\"quote-total\">Mão de obra: " + money(quote.labor) + "<br>Peças: " + money(quote.partsTotal) + "<br>Desconto: " + money(quote.discount) + "<br><strong>Total: " + money(quote.total) + "</strong></p></div>" +
+    approvalActions;
+}
+
+async function trackOrder(payload) {
+  showTrackResult("Consultando sua ordem de serviço...", "neutral");
+  const response = await fetch("/.netlify/functions/track-order", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(payload),
+  });
+  const data = await response.json();
+  if (!response.ok) throw new Error(data.message || "Não foi possível localizar a OS.");
+  trackedCredentials = payload;
+  showTrackResult(renderTrackedOrder(data.order), "success");
+}
+
 trackForm?.addEventListener("submit", async (event) => {
   event.preventDefault();
   const formData = new FormData(trackForm);
@@ -25,25 +61,35 @@ trackForm?.addEventListener("submit", async (event) => {
     phone: digitsOnly(formData.get("phone")),
   };
 
-  showTrackResult("Consultando sua ordem de serviço...", "neutral");
   try {
-    const response = await fetch("/.netlify/functions/track-order", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(payload),
-    });
-    const data = await response.json();
-    if (!response.ok) throw new Error(data.message || "Não foi possível localizar a OS.");
-
-    showTrackResult(
-      "<strong>OS " + escapeHtml(data.order.number) + " - " + escapeHtml(data.order.status) + "</strong>" +
-        "<span>Equipamento: " + escapeHtml(data.order.equipment) + "</span>" +
-        "<span>Prazo: " + escapeHtml(data.order.deadline) + "</span>" +
-        "<span>Atualização: " + escapeHtml(data.order.lastUpdate) + "</span>",
-      "success"
-    );
+    await trackOrder(payload);
   } catch (error) {
     showTrackResult(error.message || "Não foi possível localizar a OS.", "error");
+  }
+});
+
+trackResult?.addEventListener("click", async (event) => {
+  const button = event.target.closest("[data-approval]");
+  if (!button || !trackedCredentials) return;
+
+  const decision = button.dataset.approval;
+  const question = decision === "approve"
+    ? "Confirma a aprovação deste orçamento?"
+    : "Confirma que não aprova este orçamento? A OS será cancelada.";
+  if (!window.confirm(question)) return;
+
+  trackResult.querySelectorAll("button").forEach((item) => { item.disabled = true; });
+  try {
+    const response = await fetch("/.netlify/functions/respond-approval", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ ...trackedCredentials, decision }),
+    });
+    const data = await response.json();
+    if (!response.ok) throw new Error(data.message || "Não foi possível registrar sua decisão.");
+    showTrackResult("<strong>OS " + escapeHtml(data.order.number) + " - " + escapeHtml(data.order.status) + "</strong><span>" + escapeHtml(data.order.message) + "</span>", "success");
+  } catch (error) {
+    showTrackResult(error.message || "Não foi possível registrar sua decisão.", "error");
   }
 });
 

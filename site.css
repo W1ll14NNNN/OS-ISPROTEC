@@ -85,6 +85,18 @@ input:focus, textarea:focus { border-color: var(--blue); box-shadow: 0 0 0 3px r
 .result-panel[data-tone="success"] { border-color: var(--green); }
 .result-panel[data-tone="error"] { border-color: #ff6575; }
 .result-panel span { color: #b8c6d0; }
+.technical-summary, .quote-summary { margin-top: 12px; padding-top: 12px; border-top: 1px solid rgba(255,255,255,.14); }
+.technical-summary h3, .quote-summary h3, .quote-summary h4 { margin: 0 0 8px; }
+.technical-summary p { margin: 5px 0; color: #c8d5de; }
+.quote-summary { display: grid; gap: 12px; }
+.quote-summary ul { display: grid; gap: 6px; margin: 0; padding: 0; list-style: none; }
+.quote-summary li { display: flex; justify-content: space-between; gap: 16px; color: #c8d5de; }
+.quote-summary li strong { color: #fff; white-space: nowrap; }
+.quote-total { margin: 0; color: #c8d5de; line-height: 1.6; }
+.approval-actions { display: flex; flex-wrap: wrap; align-items: center; gap: 10px; margin-top: 10px; padding-top: 14px; border-top: 1px solid rgba(255,255,255,.14); }
+.approval-actions p { width: 100%; margin: 0; color: var(--yellow); font-weight: 800; }
+.button.danger { background: #bd3445; color: #fff; }
+.button:disabled { cursor: not-allowed; opacity: .6; }
 
 .appointment-section { display: grid; grid-template-columns: minmax(0, .85fr) minmax(420px, 1.15fr); gap: clamp(40px, 8vw, 130px); padding: 94px clamp(20px, 8vw, 132px); background: linear-gradient(115deg, #101d2a, #0a0e14); }
 .appointment-copy p:not(.kicker) { max-width: 440px; color: #b8c6d0; line-height: 1.6; }
