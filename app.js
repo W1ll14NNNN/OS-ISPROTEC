@@ -81,6 +81,10 @@ function seedData() {
       email: "atendimento@isprotec.com.br",
       address: "Rua da Assistência, 100 - Centro",
       logo: DEFAULT_COMPANY_LOGO,
+      pixKey: "",
+      pixName: "ISPROTEC",
+      pixCity: "TRINDADE",
+      bankInfo: "",
       defaultWarranty: 90,
       nextOrderNumber: 1054,
     },
@@ -2117,6 +2121,13 @@ function renderSettings() {
             ${field("email", "E-mail", settings.email)}
             ${field("address", "Endereço", settings.address, "text", "full")}
             ${field("defaultWarranty", "Garantia padrão (dias)", settings.defaultWarranty, "number")}
+            ${field("pixKey", "Chave Pix", settings.pixKey || "", "text", "full")}
+            ${field("pixName", "Nome no Pix", settings.pixName || settings.companyName || "")}
+            ${field("pixCity", "Cidade do Pix", settings.pixCity || "TRINDADE")}
+            <label class="field full">
+              <label>Conta bancaria</label>
+              <textarea name="bankInfo" rows="4" placeholder="Banco, agencia, conta e favorecido">${escapeHtml(settings.bankInfo || "")}</textarea>
+            </label>
             <label class="field full">
               <label>Logo da empresa</label>
               <div class="logo-upload-control">
@@ -3780,17 +3791,29 @@ function saveReceiveOrder(form) {
   closeModal();
   render();
   showToast("Recebimento registrado no caixa.");
-  openReceiptPrint(order, amount, paidDate, method);
+  if (order.paymentStatus === "Pago") openReceiptPrint(order, amount, paidDate, method);
 }
 
 function payTransaction(txId) {
   const tx = state.data.transactions.find((item) => item.id === txId);
   if (!tx) return;
+  const wasPaid = tx.status === "Pago";
   tx.status = "Pago";
   tx.paidDate = todayISO();
+  let paidOrder = null;
+  if (!wasPaid && tx.type === "income" && tx.orderId) {
+    const order = state.data.orders.find((item) => item.id === tx.orderId);
+    if (order) {
+      order.paid = Number(order.paid || 0) + Number(tx.amount || 0);
+      order.paymentStatus = paymentStatus(order);
+      order.history = [...(order.history || []), { date: todayISO(), text: `Pagamento baixado no financeiro: ${formatCurrency(tx.amount)}.` }];
+      if (order.paymentStatus === "Pago") paidOrder = order;
+    }
+  }
   saveData();
   render();
   showToast("Lançamento baixado.");
+  if (paidOrder) openReceiptPrint(paidOrder, Number(tx.amount || 0), tx.paidDate, tx.method || "Pix");
 }
 
 function exportData() {
@@ -4438,6 +4461,58 @@ function printReport() {
   openReportPrint();
 }
 
+function pixClean(value, maxLength) {
+  return String(value || "")
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .replace(/[^\w\s.@+-]/g, "")
+    .trim()
+    .toUpperCase()
+    .slice(0, maxLength);
+}
+
+function pixField(id, value) {
+  const text = String(value || "");
+  return id + String(text.length).padStart(2, "0") + text;
+}
+
+function pixCrc16(payload) {
+  let crc = 0xffff;
+  for (let i = 0; i < payload.length; i += 1) {
+    crc ^= payload.charCodeAt(i) << 8;
+    for (let bit = 0; bit < 8; bit += 1) {
+      crc = crc & 0x8000 ? (crc << 1) ^ 0x1021 : crc << 1;
+      crc &= 0xffff;
+    }
+  }
+  return crc.toString(16).toUpperCase().padStart(4, "0");
+}
+
+function buildPixPayload(amount, txId = "") {
+  const settings = state.data.settings || {};
+  const key = String(settings.pixKey || "").trim();
+  if (!key) return "";
+  const merchantAccount = pixField("00", "br.gov.bcb.pix") + pixField("01", key);
+  const tx = pixClean(txId || "***", 25) || "***";
+  const base =
+    pixField("00", "01") +
+    pixField("26", merchantAccount) +
+    pixField("52", "0000") +
+    pixField("53", "986") +
+    pixField("54", Number(amount || 0).toFixed(2)) +
+    pixField("58", "BR") +
+    pixField("59", pixClean(settings.pixName || settings.companyName || "ISPROTEC", 25)) +
+    pixField("60", pixClean(settings.pixCity || "TRINDADE", 15)) +
+    pixField("62", pixField("05", tx));
+  const withCrc = base + "6304";
+  return withCrc + pixCrc16(withCrc);
+}
+
+function pixQrUrl(payload) {
+  if (!payload) return "";
+  return `https://api.qrserver.com/v1/create-qr-code/?size=170x170&margin=8&data=${encodeURIComponent(payload)}`;
+}
+
 function printBrandHeader(companyName, subtitle = "", extraHtml = "") {
   return `
     <header class="print-header">
@@ -4457,6 +4532,9 @@ function openReceiptPrint(order, amount, paidDate, method) {
   const customer = state.data.customers.find((item) => item.id === order.customerId);
   const equipment = state.data.equipment.find((item) => item.id === order.equipmentId);
   const balance = balanceOfOrder(order);
+  const settings = state.data.settings || {};
+  const pixPayload = buildPixPayload(amount, `OS${order.number}`);
+  const qrUrl = pixQrUrl(pixPayload);
   const win = window.open("", "_blank", "width=820,height=680");
   win.document.write(`
     <!DOCTYPE html>
@@ -4477,8 +4555,14 @@ function openReceiptPrint(order, amount, paidDate, method) {
           .box { border: 1px solid #dbe5ec; padding: 12px; border-radius: 8px; }
           .summary { margin-top: 18px; border: 1px solid #dbe5ec; border-radius: 8px; padding: 14px; background: #f8fbfd; }
           .summary strong { display: inline-block; min-width: 170px; }
+          .payment-box { margin-top: 18px; display: grid; grid-template-columns: 1fr 190px; gap: 16px; border: 1px solid #dbe5ec; border-radius: 8px; padding: 14px; }
+          .payment-box pre { white-space: pre-wrap; font-family: Arial, sans-serif; margin: 6px 0 0; color: #44515f; }
+          .qr { text-align: center; }
+          .qr img { width: 170px; height: 170px; border: 1px solid #dbe5ec; border-radius: 8px; }
+          .pix-copy { margin-top: 10px; padding: 10px; border: 1px dashed #9fb0bd; border-radius: 8px; font-size: 10px; line-break: anywhere; word-break: break-all; color: #44515f; }
           .footer { margin-top: 40px; display: grid; grid-template-columns: 1fr 1fr; gap: 40px; }
           .line { border-top: 1px solid #16212c; text-align: center; padding-top: 8px; }
+          @media print { .payment-box { break-inside: avoid; } }
         </style>
       </head>
       <body>
@@ -4511,6 +4595,18 @@ function openReceiptPrint(order, amount, paidDate, method) {
           <p><strong>Forma de pagamento:</strong> ${escapeHtml(method)}</p>
           <p><strong>Saldo restante:</strong> ${formatCurrency(balance)}</p>
           <p><strong>Status financeiro:</strong> ${escapeHtml(order.paymentStatus)}</p>
+        </section>
+        <section class="payment-box">
+          <div>
+            <h2>Dados para pagamento</h2>
+            <p><strong>Chave Pix:</strong> ${escapeHtml(settings.pixKey || "Nao informada")}</p>
+            <p><strong>Favorecido:</strong> ${escapeHtml(settings.pixName || settings.companyName || "")}</p>
+            ${settings.bankInfo ? `<pre>${escapeHtml(settings.bankInfo)}</pre>` : `<p>Conta bancaria nao informada.</p>`}
+            ${pixPayload ? `<div class="pix-copy"><strong>Pix copia e cola:</strong><br>${escapeHtml(pixPayload)}</div>` : ""}
+          </div>
+          <div class="qr">
+            ${qrUrl ? `<img src="${qrUrl}" alt="QR Code Pix" />` : `<p>Cadastre a chave Pix nas configuracoes para gerar o QR Code.</p>`}
+          </div>
         </section>
         <div class="footer">
           <div class="line">Cliente</div>
