@@ -4,6 +4,7 @@ const CLOUD_STATE_ID_DEFAULT = "isprotec-main";
 const SUPABASE_CDN_URL = "https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2";
 const DEFAULT_COMPANY_LOGO = "assets/isprotec-logo.svg";
 const MAX_LOGO_FILE_SIZE = 1024 * 1024;
+const DEFAULT_PIX_PAYLOAD = "00020101021126360014br.gov.bcb.pix0114419673050001545204000053039865802BR5919WILLIAN SILVA BARRO6007GOIANIA62070503***63040745";
 
 const cloud = {
   client: null,
@@ -81,10 +82,11 @@ function seedData() {
       email: "atendimento@isprotec.com.br",
       address: "Rua da Assistência, 100 - Centro",
       logo: DEFAULT_COMPANY_LOGO,
-      pixKey: "",
-      pixName: "ISPROTEC",
-      pixCity: "TRINDADE",
-      bankInfo: "",
+      pixKey: "41.967.305/0001-54",
+      pixName: "WILLIAN SILVA BARROS 75493713187",
+      pixCity: "GOIANIA",
+      pixPayload: DEFAULT_PIX_PAYLOAD,
+      bankInfo: "Banco Inter\nChave Pix: 41.967.305/0001-54\nFavorecido: WILLIAN SILVA BARROS 75493713187",
       defaultWarranty: 90,
       nextOrderNumber: 1054,
     },
@@ -2125,6 +2127,10 @@ function renderSettings() {
             ${field("pixKey", "Chave Pix", settings.pixKey || "", "text", "full")}
             ${field("pixName", "Nome no Pix", settings.pixName || settings.companyName || "")}
             ${field("pixCity", "Cidade do Pix", settings.pixCity || "TRINDADE")}
+            <label class="field full">
+              <label>Pix copia e cola</label>
+              <textarea name="pixPayload" rows="4" placeholder="Cole aqui o Pix copia e cola">${escapeHtml(settings.pixPayload || DEFAULT_PIX_PAYLOAD)}</textarea>
+            </label>
             <label class="field full">
               <label>Conta bancaria</label>
               <textarea name="bankInfo" rows="4" placeholder="Banco, agencia, conta e favorecido">${escapeHtml(settings.bankInfo || "")}</textarea>
@@ -4495,6 +4501,8 @@ function pixCrc16(payload) {
 
 function buildPixPayload(amount, txId = "") {
   const settings = state.data.settings || {};
+  const configuredPayload = String(settings.pixPayload || DEFAULT_PIX_PAYLOAD || "").trim();
+  if (configuredPayload) return configuredPayload;
   const key = String(settings.pixKey || "").trim();
   if (!key) return "";
   const merchantAccount = pixField("00", "br.gov.bcb.pix") + pixField("01", key);
@@ -4630,6 +4638,7 @@ function openReceiptPrint(order, amount, paidDate, method) {
             <h2>Dados para pagamento</h2>
             <p><strong>Chave Pix:</strong> ${escapeHtml(settings.pixKey || "Nao informada")}</p>
             <p><strong>Favorecido:</strong> ${escapeHtml(settings.pixName || settings.companyName || "")}</p>
+            <p><strong>Orientacao:</strong> informe o valor de ${formatCurrency(amount)} ao pagar pelo Pix.</p>
             ${settings.bankInfo ? `<pre>${escapeHtml(settings.bankInfo)}</pre>` : `<p>Conta bancaria nao informada.</p>`}
             ${pixPayload ? `<div class="pix-copy"><strong>Pix copia e cola:</strong><br>${escapeHtml(pixPayload)}</div>` : ""}
           </div>
