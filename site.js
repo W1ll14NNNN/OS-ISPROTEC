@@ -224,7 +224,7 @@ function addProductToCart(button) {
   if (existing) existing.quantity += 1;
   else cart.push({ key, id, name, price, quantity: 1 });
   updateCartSummary();
-  productOrderForm?.scrollIntoView({ behavior: "smooth", block: "start" });
+  document.getElementById("carrinho")?.scrollIntoView({ behavior: "smooth", block: "start" });
 }
 
 function bindProductPresetButtons() {

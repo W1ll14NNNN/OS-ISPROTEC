@@ -80,7 +80,7 @@ export default async function handler(request, response) {
       issue: "Pedido online: " + productSummary + (notes ? " - " + notes : ""),
       diagnosis: "",
       solution: "",
-      status: requestType === "payment" ? "Entrada" : "Orçamento",
+      status: finalRequestType === "payment" ? "Entrada" : "Orçamento",
       priority: "Média",
       technician: "",
       createdAt,
@@ -88,23 +88,23 @@ export default async function handler(request, response) {
       scheduledAt: "",
       labor: 0,
       discount: 0,
-      parts: [{ partId: "", qty: quantity, price }],
+      parts: requestItems.map((item) => ({ partId: "", qty: item.quantity, price: item.price })),
       paid: 0,
       paymentStatus: "Pendente",
       warrantyDays: Number(state.settings.defaultWarranty || 90),
       partsReserved: false,
       storeTag: "WEB-PROD-" + number,
-      storeLocation: requestType === "payment" ? "Pedido com pagamento" : "Pedido por orçamento",
-      history: [{ date: createdAt, text: requestType === "payment" ? "Pedido de produto enviado para pagamento." : "Pedido de produto enviado para orçamento." }],
-      requestType,
-      productRequest: { product, quantity, sku: catalog.sku || "", price, notes, productId: systemProduct?.id || "" },
+      storeLocation: finalRequestType === "payment" ? "Pedido com pagamento" : "Pedido por orçamento",
+      history: [{ date: createdAt, text: finalRequestType === "payment" ? "Pedido de produto enviado para pagamento." : "Pedido de produto enviado para orçamento." }],
+      requestType: finalRequestType,
+      productRequest: { product: productSummary, quantity, notes, items: requestItems },
     });
     state.settings.nextOrderNumber = number + 1;
 
     await saveState(state);
     return sendJson(response, 201, {
       orderNumber: number,
-      message: requestType === "payment"
+      message: finalRequestType === "payment"
         ? "Pedido registrado. A equipe vai confirmar o pagamento e finalizar o atendimento."
         : "Pedido registrado. A equipe vai enviar o orçamento.",
     });
