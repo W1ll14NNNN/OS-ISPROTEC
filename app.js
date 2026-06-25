@@ -1311,6 +1311,7 @@ function renderOrdersTable(orders) {
                     <div class="actions-row">
                       <button class="mini-btn primary" data-action="edit-order" data-id="${order.id}">Editar</button>
                       <button class="mini-btn" data-action="print-order" data-id="${order.id}">Imprimir</button>
+                      <button class="mini-btn" data-action="print-receipt" data-id="${order.id}" ${Number(order.paid || 0) <= 0 ? "disabled" : ""}>Recibo</button>
                       <button class="mini-btn" data-action="print-tag" data-id="${order.id}">Etiqueta</button>
                       <button class="mini-btn success" data-action="whatsapp-order" data-id="${order.id}">WhatsApp</button>
                       <button class="mini-btn success" data-action="receive-order" data-id="${order.id}" ${balanceOfOrder(order) <= 0 ? "disabled" : ""}>Receber</button>
@@ -3790,8 +3791,12 @@ function saveReceiveOrder(form) {
   saveData();
   closeModal();
   render();
-  showToast("Recebimento registrado no caixa.");
-  if (order.paymentStatus === "Pago") openReceiptPrint(order, amount, paidDate, method);
+  if (order.paymentStatus === "Pago") {
+    showToast("Recebimento registrado. Recibo aberto para impressao.");
+    openReceiptPrint(order, amount, paidDate, method);
+  } else {
+    showToast("Recebimento parcial registrado no caixa.");
+  }
 }
 
 function payTransaction(txId) {
@@ -4528,6 +4533,26 @@ function printBrandHeader(companyName, subtitle = "", extraHtml = "") {
   `;
 }
 
+function printReceiptForOrder(orderId) {
+  const order = state.data.orders.find((item) => item.id === orderId);
+  if (!order) return;
+  if (Number(order.paid || 0) <= 0) {
+    showToast("Esta OS ainda nao tem pagamento registrado.");
+    return;
+  }
+
+  const payments = state.data.transactions
+    .filter((tx) => tx.type === "income" && tx.orderId === order.id && tx.status === "Pago")
+    .sort((a, b) => String(b.paidDate || b.dueDate || "").localeCompare(String(a.paidDate || a.dueDate || "")));
+  const lastPayment = payments[0];
+  openReceiptPrint(
+    order,
+    Number(lastPayment?.amount || order.paid || orderTotal(order)),
+    lastPayment?.paidDate || lastPayment?.dueDate || todayISO(),
+    lastPayment?.method || "Pix"
+  );
+}
+
 function openReceiptPrint(order, amount, paidDate, method) {
   const customer = state.data.customers.find((item) => item.id === order.customerId);
   const equipment = state.data.equipment.find((item) => item.id === order.equipmentId);
@@ -4536,6 +4561,10 @@ function openReceiptPrint(order, amount, paidDate, method) {
   const pixPayload = buildPixPayload(amount, `OS${order.number}`);
   const qrUrl = pixQrUrl(pixPayload);
   const win = window.open("", "_blank", "width=820,height=680");
+  if (!win) {
+    showToast("O navegador bloqueou a janela do recibo. Permita pop-ups para este sistema.");
+    return;
+  }
   win.document.write(`
     <!DOCTYPE html>
     <html lang="pt-BR">
@@ -4629,6 +4658,7 @@ document.addEventListener("click", (event) => {
     "new-order": () => openOrderModal(),
     "edit-order": () => openOrderModal(id),
     "print-order": () => printOrder(id),
+    "print-receipt": () => printReceiptForOrder(id),
     "whatsapp-order": () => openOrderWhatsApp(id),
     "print-tag": () => printOrderTag(id),
     "receive-order": () => openReceiveOrderModal(id),
