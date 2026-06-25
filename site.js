@@ -9,6 +9,17 @@ const productId = document.getElementById("productId");
 const productQuantity = document.getElementById("productQuantity");
 const productRequestType = document.getElementById("productRequestType");
 const productsGrid = document.getElementById("productsGrid");
+const cartSummary = document.getElementById("cartSummary");
+const cartProductName = document.getElementById("cartProductName");
+const cartProductPrice = document.getElementById("cartProductPrice");
+const cartTotal = document.getElementById("cartTotal");
+const paymentOptions = document.getElementById("paymentOptions");
+const pixQrImage = document.getElementById("pixQrImage");
+const pixCopyPaste = document.getElementById("pixCopyPaste");
+const copyPixButton = document.getElementById("copyPixButton");
+
+const PIX_COPY_PASTE = "00020101021126360014br.gov.bcb.pix0114419673050001545204000053039865802BR5919WILLIAN SILVA BARRO6007GOIANIA62070503***63040745";
+let selectedProductPrice = 0;
 
 let trackedCredentials = null;
 
@@ -151,12 +162,26 @@ function renderProductCards(products) {
             <p>${escapeHtml(product.description || "Produto ISPROTEC para venda e reposicao.")}</p>
             <strong>${price}</strong>
           </div>
-          <button class="button primary" type="button" data-product-id="${escapeHtml(product.id)}" data-product-preset="${escapeHtml(product.name)}" data-request-mode="budget">Pedir orcamento</button>
-          <button class="button outline" type="button" data-product-id="${escapeHtml(product.id)}" data-product-preset="${escapeHtml(product.name)}" data-request-mode="payment">Pagar agora</button>
+          <button class="button primary" type="button" data-product-id="${escapeHtml(product.id)}" data-product-preset="${escapeHtml(product.name)}" data-product-price="${Number(product.price || 0)}" data-request-mode="${Number(product.price || 0) > 0 ? "payment" : "budget"}">Adicionar ao carrinho</button>
         </article>
       `;
     })
     .join("");
+}
+
+function pixQrUrl() {
+  return "https://api.qrserver.com/v1/create-qr-code/?size=180x180&margin=8&data=" + encodeURIComponent(PIX_COPY_PASTE);
+}
+
+function updateCartSummary() {
+  const quantity = Math.max(1, Number(productQuantity?.value || 1));
+  const total = selectedProductPrice * quantity;
+  if (cartProductName) cartProductName.textContent = productName?.value || "Produto selecionado";
+  if (cartProductPrice) cartProductPrice.textContent = selectedProductPrice > 0 ? "Valor unitario: " + money(selectedProductPrice) : "Valor sob consulta";
+  if (cartTotal) cartTotal.textContent = selectedProductPrice > 0 ? "Total: " + money(total) : "Total sob consulta";
+  if (paymentOptions) paymentOptions.hidden = productRequestType?.value !== "payment";
+  if (pixQrImage) pixQrImage.src = pixQrUrl();
+  if (pixCopyPaste) pixCopyPaste.value = PIX_COPY_PASTE;
 }
 
 function bindProductPresetButtons() {
@@ -164,8 +189,11 @@ function bindProductPresetButtons() {
     button.addEventListener("click", () => {
       if (productName) productName.value = button.dataset.productPreset || "";
       if (productId) productId.value = button.dataset.productId || "";
+      selectedProductPrice = Number(button.dataset.productPrice || 0);
       if (productQuantity) productQuantity.value = "1";
       if (productRequestType) productRequestType.value = button.dataset.requestMode || "budget";
+      if (cartSummary) cartSummary.hidden = false;
+      updateCartSummary();
       productOrderForm?.scrollIntoView({ behavior: "smooth", block: "start" });
     });
   });
@@ -184,6 +212,18 @@ async function loadProducts() {
 }
 
 loadProducts();
+
+productQuantity?.addEventListener("input", updateCartSummary);
+productRequestType?.addEventListener("change", updateCartSummary);
+copyPixButton?.addEventListener("click", async () => {
+  try {
+    await navigator.clipboard.writeText(PIX_COPY_PASTE);
+    productFeedback.textContent = "Pix copia e cola copiado.";
+  } catch {
+    pixCopyPaste?.select();
+    productFeedback.textContent = "Selecione e copie o Pix copia e cola.";
+  }
+});
 
 productOrderForm?.addEventListener("submit", async (event) => {
   event.preventDefault();
@@ -207,6 +247,9 @@ productOrderForm?.addEventListener("submit", async (event) => {
     productOrderForm.reset();
     productQuantity.value = "1";
     if (productId) productId.value = "";
+    selectedProductPrice = 0;
+    if (cartSummary) cartSummary.hidden = true;
+    if (paymentOptions) paymentOptions.hidden = true;
     productRequestType.value = "budget";
     productFeedback.textContent = data.message || "Pedido enviado com sucesso.";
   } catch (error) {

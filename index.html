@@ -124,8 +124,7 @@
             <p>Equipamentos para escritório, gráfica rápida e uso doméstico.</p>
             <strong>A partir de R$ 899,00</strong>
           </div>
-          <button class="button primary" type="button" data-product-preset="Impressoras" data-request-mode="budget">Pedir orçamento</button>
-          <button class="button outline" type="button" data-product-preset="Impressoras" data-request-mode="payment">Pagar agora</button>
+          <button class="button primary" type="button" data-product-preset="Impressoras" data-product-price="899" data-request-mode="payment">Adicionar ao carrinho</button>
         </article>
         <article class="product-card">
           <img src="assets/isprotec-products.png" alt="Toners e cartuchos para impressoras" />
@@ -135,8 +134,7 @@
             <p>Modelos compatíveis e originais para diversos equipamentos.</p>
             <strong>A partir de R$ 69,00</strong>
           </div>
-          <button class="button primary" type="button" data-product-preset="Toners e cartuchos" data-request-mode="budget">Pedir orçamento</button>
-          <button class="button outline" type="button" data-product-preset="Toners e cartuchos" data-request-mode="payment">Pagar agora</button>
+          <button class="button primary" type="button" data-product-preset="Toners e cartuchos" data-product-price="69" data-request-mode="payment">Adicionar ao carrinho</button>
         </article>
         <article class="product-card">
           <img src="assets/isprotec-products.png" alt="Refis de tinta e manutenção de impressora" />
@@ -146,8 +144,7 @@
             <p>Refil para tanques, manutenção e suporte para impressão contínua.</p>
             <strong>A partir de R$ 39,00</strong>
           </div>
-          <button class="button primary" type="button" data-product-preset="Refis de tinta" data-request-mode="budget">Pedir orçamento</button>
-          <button class="button outline" type="button" data-product-preset="Refis de tinta" data-request-mode="payment">Pagar agora</button>
+          <button class="button primary" type="button" data-product-preset="Refis de tinta" data-product-price="39" data-request-mode="payment">Adicionar ao carrinho</button>
         </article>
         <article class="product-card">
           <img src="assets/isprotec-products.png" alt="Peças e suprimentos para impressoras" />
@@ -157,11 +154,34 @@
             <p>Itens para manutenção, troca e reposição técnica.</p>
             <strong>Sob consulta</strong>
           </div>
-          <button class="button primary" type="button" data-product-preset="Peças e acessórios" data-request-mode="budget">Pedir orçamento</button>
-          <button class="button outline" type="button" data-product-preset="Peças e acessórios" data-request-mode="payment">Pagar agora</button>
+          <button class="button primary" type="button" data-product-preset="Peças e acessórios" data-product-price="0" data-request-mode="budget">Adicionar ao carrinho</button>
         </article>
       </div>
       <form class="product-order-form" id="productOrderForm">
+        <div class="cart-summary" id="cartSummary" hidden>
+          <div>
+            <p class="kicker">Carrinho</p>
+            <h3 id="cartProductName">Produto selecionado</h3>
+            <p id="cartProductPrice">Valor sob consulta</p>
+          </div>
+          <strong id="cartTotal">Total: R$ 0,00</strong>
+        </div>
+        <div class="payment-options" id="paymentOptions" hidden>
+          <h3>Pagamento</h3>
+          <label class="payment-option">
+            <input type="radio" name="paymentMethod" value="pix" checked />
+            <span>Pix</span>
+          </label>
+          <div class="pix-payment">
+            <img id="pixQrImage" src="" alt="QR Code Pix ISPROTEC" />
+            <div>
+              <strong>Pix copia e cola</strong>
+              <p>Informe o valor do pedido no aplicativo do banco antes de confirmar.</p>
+              <textarea id="pixCopyPaste" readonly rows="4"></textarea>
+              <button class="button outline" type="button" id="copyPixButton">Copiar Pix</button>
+            </div>
+          </div>
+        </div>
         <div class="form-grid">
           <label>Produto selecionado<input name="product" id="productName" required /></label>
           <input name="productId" id="productId" type="hidden" />
