@@ -611,7 +611,7 @@ function scheduleCloudSave(data) {
 
 async function saveCloudData(data = state.data) {
   const client = await getSupabaseClient();
-  if (!client || !cloud.ready || cloud.loading || !cloud.user || cloud.saving) return;
+  if (!client || !cloud.ready || cloud.loading || !cloud.user || cloud.saving) return false;
 
   cloud.saving = true;
   try {
@@ -622,12 +622,23 @@ async function saveCloudData(data = state.data) {
       updated_by: cloud.user.id,
     });
     if (error) throw error;
+    return true;
   } catch (error) {
     console.error(error);
     showToast("Dados salvos localmente. Falha ao sincronizar online.");
+    return false;
   } finally {
     cloud.saving = false;
   }
+}
+
+async function saveDataAndSyncNow(data = state.data) {
+  saveLocalData(data);
+  window.clearTimeout(cloud.saveTimer);
+  if (!cloud.enabled || !cloud.ready || cloud.loading || !cloud.user) {
+    return false;
+  }
+  return await saveCloudData(data);
 }
 
 function uid(prefix) {
@@ -1458,7 +1469,7 @@ function deleteSelectedParts() {
   showToast(`${removableIds.length} item(ns) excluido(s). ${ids.length - removableIds.length} preservado(s) por vínculo.`);
 }
 
-function deleteSelectedProducts() {
+async function deleteSelectedProducts() {
   pruneSelectedProducts();
   const ids = [...state.selectedProductIds];
   if (!ids.length) {
@@ -1469,9 +1480,9 @@ function deleteSelectedProducts() {
 
   state.data.products = state.data.products.filter((product) => !state.selectedProductIds.has(product.id));
   state.selectedProductIds.clear();
-  saveData();
+  const synced = await saveDataAndSyncNow();
   renderProducts();
-  showToast(`${ids.length} produto(s) excluido(s).`);
+  showToast(synced ? `${ids.length} produto(s) excluido(s) e sincronizado(s) com a loja.` : `${ids.length} produto(s) excluido(s) localmente. Entre online para sincronizar com a loja.`);
 }
 
 function deleteSelectedTransactions() {
@@ -3597,10 +3608,10 @@ async function saveProduct(form) {
   const index = state.data.products.findIndex((product) => product.id === id);
   if (index >= 0) state.data.products[index] = record;
   else state.data.products.push(record);
-  saveData();
+  const synced = await saveDataAndSyncNow();
   closeModal();
   renderProducts();
-  showToast("Produto salvo.");
+  showToast(synced ? "Produto salvo e sincronizado com a loja." : "Produto salvo localmente. Entre online para sincronizar com a loja.");
 }
 
 async function previewProductImage(input) {

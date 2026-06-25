@@ -173,7 +173,7 @@ function bindProductPresetButtons() {
 
 async function loadProducts() {
   try {
-    const response = await fetch("/api/products");
+    const response = await fetch("/api/products?ts=" + Date.now(), { cache: "no-store" });
     const data = await readJson(response);
     if (response.ok) renderProductCards(data.products);
   } catch {
