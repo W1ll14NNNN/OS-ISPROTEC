@@ -4261,6 +4261,7 @@ function printOrder(orderId) {
           .box { border: 1px solid #dbe5ec; padding: 12px; border-radius: 8px; }
           .total { text-align: right; font-size: 18px; font-weight: 700; }
           .approval-note { margin-top: 28px; padding: 12px; border: 2px solid #18b9c3; border-radius: 8px; text-align: center; font-weight: 700; text-transform: uppercase; line-height: 1.45; }
+          .approval-note a { color: #0b6f86; text-decoration: underline; }
           .sign { display: grid; grid-template-columns: 1fr 1fr; gap: 42px; margin-top: 46px; }
           .line { border-top: 1px solid #16212c; text-align: center; padding-top: 8px; }
         </style>
@@ -4310,7 +4311,7 @@ function printOrder(orderId) {
         <p class="total">Total: ${formatCurrency(orderTotal(order))}</p>
         <p class="total">Pago: ${formatCurrency(order.paid)} · Saldo: ${formatCurrency(balanceOfOrder(order))}</p>
         <p><strong>Garantia:</strong> ${Number(order.warrantyDays || 0)} dias para o serviço executado, conforme condições da assistência.</p>
-        <div class="approval-note">Para aprovar OS ou nao aprovar OS acessar site isprotec.vercel.app e acompanhar status do equipamento.</div>
+        <div class="approval-note">Para aprovar OS ou nao aprovar OS acessar site <a href="https://isprotec.vercel.app" target="_blank" rel="noopener">isprotec.vercel.app</a> e acompanhar status do equipamento.</div>
         <div class="sign">
           <div class="line">Cliente</div>
           <div class="line">Isprotec</div>
