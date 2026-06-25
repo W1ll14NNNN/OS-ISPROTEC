@@ -114,7 +114,7 @@
         <h2 id="products-title">Produtos para venda e reposição</h2>
         <p>Escolha um item e siga por orçamento ou pagamento. O pedido entra no sistema e a equipe finaliza o atendimento.</p>
       </div>
-      <div class="products-grid" aria-label="Produtos disponíveis para venda">
+      <div class="products-grid" id="productsGrid" aria-label="Produtos disponíveis para venda">
         <article class="product-card">
           <img src="assets/isprotec-products.png" alt="Impressora e suprimentos da ISPROTEC" />
           <div>
@@ -163,6 +163,7 @@
       <form class="product-order-form" id="productOrderForm">
         <div class="form-grid">
           <label>Produto selecionado<input name="product" id="productName" required /></label>
+          <input name="productId" id="productId" type="hidden" />
           <label>Quantidade<input name="quantity" id="productQuantity" type="number" min="1" value="1" required /></label>
           <label>Nome completo<input name="name" autocomplete="name" required /></label>
           <label>WhatsApp<input name="phone" inputmode="tel" autocomplete="tel" required /></label>

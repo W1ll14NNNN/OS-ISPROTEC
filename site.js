@@ -5,8 +5,10 @@ const appointmentFeedback = document.getElementById("appointmentFeedback");
 const productOrderForm = document.getElementById("productOrderForm");
 const productFeedback = document.getElementById("productFeedback");
 const productName = document.getElementById("productName");
+const productId = document.getElementById("productId");
 const productQuantity = document.getElementById("productQuantity");
 const productRequestType = document.getElementById("productRequestType");
+const productsGrid = document.getElementById("productsGrid");
 
 let trackedCredentials = null;
 
@@ -134,14 +136,54 @@ appointmentForm?.addEventListener("submit", async (event) => {
   }
 });
 
-document.querySelectorAll("[data-product-preset]").forEach((button) => {
-  button.addEventListener("click", () => {
-    if (productName) productName.value = button.dataset.productPreset || "";
-    if (productQuantity) productQuantity.value = "1";
-    if (productRequestType) productRequestType.value = button.dataset.requestMode || "budget";
-    productOrderForm?.scrollIntoView({ behavior: "smooth", block: "start" });
+function renderProductCards(products) {
+  if (!productsGrid || !products?.length) return;
+  productsGrid.innerHTML = products
+    .map((product) => {
+      const price = Number(product.price || 0) > 0 ? money(product.price) : "Sob consulta";
+      const stockLabel = Number(product.stock || 0) > 0 ? "Disponivel" : "Sob encomenda";
+      return `
+        <article class="product-card">
+          <img src="${escapeHtml(product.image || "assets/isprotec-products.png")}" alt="${escapeHtml(product.name)}" />
+          <div>
+            <p class="product-tag">${escapeHtml(product.category || stockLabel)}</p>
+            <h3>${escapeHtml(product.name)}</h3>
+            <p>${escapeHtml(product.description || "Produto ISPROTEC para venda e reposicao.")}</p>
+            <strong>${price}</strong>
+          </div>
+          <button class="button primary" type="button" data-product-id="${escapeHtml(product.id)}" data-product-preset="${escapeHtml(product.name)}" data-request-mode="budget">Pedir orcamento</button>
+          <button class="button outline" type="button" data-product-id="${escapeHtml(product.id)}" data-product-preset="${escapeHtml(product.name)}" data-request-mode="payment">Pagar agora</button>
+        </article>
+      `;
+    })
+    .join("");
+}
+
+function bindProductPresetButtons() {
+  document.querySelectorAll("[data-product-preset]").forEach((button) => {
+    button.addEventListener("click", () => {
+      if (productName) productName.value = button.dataset.productPreset || "";
+      if (productId) productId.value = button.dataset.productId || "";
+      if (productQuantity) productQuantity.value = "1";
+      if (productRequestType) productRequestType.value = button.dataset.requestMode || "budget";
+      productOrderForm?.scrollIntoView({ behavior: "smooth", block: "start" });
+    });
   });
-});
+}
+
+async function loadProducts() {
+  try {
+    const response = await fetch("/api/products");
+    const data = await readJson(response);
+    if (response.ok) renderProductCards(data.products);
+  } catch {
+    // Mantem os cards fixos quando a API ainda nao estiver configurada.
+  } finally {
+    bindProductPresetButtons();
+  }
+}
+
+loadProducts();
 
 productOrderForm?.addEventListener("submit", async (event) => {
   event.preventDefault();
@@ -164,6 +206,7 @@ productOrderForm?.addEventListener("submit", async (event) => {
 
     productOrderForm.reset();
     productQuantity.value = "1";
+    if (productId) productId.value = "";
     productRequestType.value = "budget";
     productFeedback.textContent = data.message || "Pedido enviado com sucesso.";
   } catch (error) {

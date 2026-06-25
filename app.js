@@ -39,6 +39,7 @@ const state = {
   selectedCustomerIds: new Set(),
   selectedEquipmentIds: new Set(),
   selectedPartIds: new Set(),
+  selectedProductIds: new Set(),
   selectedTransactionIds: new Set(),
   selectedUserIds: new Set(),
   currentUserId: localStorage.getItem(SESSION_KEY) || "",
@@ -191,6 +192,47 @@ function seedData() {
         cost: 24,
         price: 55,
         supplier: "Distribuidora PrintMais",
+      },
+    ],
+    products: [
+      {
+        id: "prod-1",
+        sku: "PRD-IMP-01",
+        name: "Impressora Epson EcoTank L3250",
+        category: "Impressoras",
+        price: 899,
+        cost: 740,
+        stock: 4,
+        minStock: 1,
+        active: true,
+        image: "assets/isprotec-products.png",
+        description: "Modelo para escritório e uso doméstico.",
+      },
+      {
+        id: "prod-2",
+        sku: "PRD-TON-01",
+        name: "Toner compatível Brother TN-1060",
+        category: "Toners e cartuchos",
+        price: 95,
+        cost: 48,
+        stock: 8,
+        minStock: 3,
+        active: true,
+        image: "assets/isprotec-products.png",
+        description: "Linha de reposição para impressoras laser.",
+      },
+      {
+        id: "prod-3",
+        sku: "PRD-REF-01",
+        name: "Refil de tinta Epson preta",
+        category: "Refis de tinta",
+        price: 55,
+        cost: 24,
+        stock: 2,
+        minStock: 4,
+        active: true,
+        image: "assets/isprotec-products.png",
+        description: "Refil para tanque de tinta e recarga.",
       },
     ],
     services: [
@@ -397,6 +439,7 @@ function migrateData(data) {
     customers: data.customers || [],
     equipment: data.equipment || [],
     parts: data.parts || [],
+    products: data.products || fallback.products || [],
     services: data.services || fallback.services || [],
     users: normalizeUsers(data.users || fallback.users || []),
     orders: (data.orders || []).map((order) => ({
@@ -733,6 +776,10 @@ function partById(id) {
   return state.data.parts.find((part) => part.id === id);
 }
 
+function productById(id) {
+  return state.data.products.find((product) => product.id === id);
+}
+
 function serviceById(id) {
   return state.data.services.find((service) => service.id === id);
 }
@@ -898,6 +945,7 @@ function viewTitle(view) {
     schedule: "Agenda Técnica",
     customers: "Clientes e Equipamentos",
     inventory: "Estoque",
+    products: "Produtos",
     finance: "Fluxo de Caixa",
     reports: "Relatórios",
     settings: "Configurações",
@@ -912,6 +960,7 @@ function render() {
     schedule: renderSchedule,
     customers: renderCustomers,
     inventory: renderInventory,
+    products: renderProducts,
     finance: renderFinance,
     reports: renderReports,
     settings: renderSettings,
@@ -1323,6 +1372,10 @@ function pruneSelectedParts() {
   pruneSelectionSet(state.selectedPartIds, state.data.parts);
 }
 
+function pruneSelectedProducts() {
+  pruneSelectionSet(state.selectedProductIds, state.data.products);
+}
+
 function pruneSelectedTransactions() {
   pruneSelectionSet(state.selectedTransactionIds, state.data.transactions);
 }
@@ -1396,6 +1449,22 @@ function deleteSelectedParts() {
   saveData();
   render();
   showToast(`${removableIds.length} item(ns) excluido(s). ${ids.length - removableIds.length} preservado(s) por vínculo.`);
+}
+
+function deleteSelectedProducts() {
+  pruneSelectedProducts();
+  const ids = [...state.selectedProductIds];
+  if (!ids.length) {
+    showToast("Selecione pelo menos um produto.");
+    return;
+  }
+  if (!window.confirm(`Excluir ${ids.length} produto(s) selecionado(s)?`)) return;
+
+  state.data.products = state.data.products.filter((product) => !state.selectedProductIds.has(product.id));
+  state.selectedProductIds.clear();
+  saveData();
+  renderProducts();
+  showToast(`${ids.length} produto(s) excluido(s).`);
 }
 
 function deleteSelectedTransactions() {
@@ -1710,6 +1779,111 @@ function renderPartsTable() {
                       <button class="mini-btn success" data-action="stock-in" data-id="${part.id}">Entrada</button>
                     </div>
                   </td>
+                </tr>
+              `;
+            })
+            .join("")}
+        </tbody>
+      </table>
+    </div>
+  `;
+}
+
+function renderProducts() {
+  pruneSelectedProducts();
+  const productCount = state.selectedProductIds.size;
+  const activeProducts = state.data.products.filter((product) => product.active !== false).length;
+  const stockValue = state.data.products.reduce((sum, product) => sum + Number(product.stock || 0) * Number(product.cost || 0), 0);
+  const lowStock = state.data.products.filter((product) => Number(product.stock || 0) <= Number(product.minStock || 0)).length;
+
+  document.getElementById("productsView").innerHTML = `
+    <div class="page-grid">
+      <div class="grid-3">
+        <article class="metric-card accent-blue">
+          <small>Produtos cadastrados</small>
+          <strong>${state.data.products.length}</strong>
+          <em>Itens da vitrine e venda</em>
+        </article>
+        <article class="metric-card accent-yellow">
+          <small>Ativos no site</small>
+          <strong>${activeProducts}</strong>
+          <em>Disponiveis para solicitacao</em>
+        </article>
+        <article class="metric-card accent-magenta">
+          <small>Reposicao necessaria</small>
+          <strong>${lowStock}</strong>
+          <em>Produtos no minimo ou abaixo</em>
+        </article>
+      </div>
+
+      <section class="panel">
+        <div class="panel-header">
+          <div>
+            <h3>Produtos da loja</h3>
+            <p>Cadastre produtos, fotos, valores e disponibilidade para vender pelo site.</p>
+          </div>
+          <div class="actions-row">
+            <button class="btn danger" data-action="delete-selected-products" ${productCount ? "" : "disabled"}>Excluir selecionados (${productCount})</button>
+            <button class="btn primary" data-action="new-product"><span>+</span>Novo produto</button>
+          </div>
+        </div>
+        ${renderProductsTable()}
+      </section>
+
+      <section class="panel">
+        <div class="panel-header">
+          <div>
+            <h3>Resumo da vitrine</h3>
+            <p>Valor em estoque: <strong>${formatCurrency(stockValue)}</strong></p>
+          </div>
+        </div>
+        <div class="empty-state">Depois desta tela, a vitrine publica pode ser conectada para ler estes produtos automaticamente.</div>
+      </section>
+    </div>
+  `;
+}
+
+function renderProductsTable() {
+  if (!state.data.products.length) return `<div class="empty-state">Nenhum produto cadastrado</div>`;
+  const allSelected = state.data.products.length > 0 && state.data.products.every((product) => state.selectedProductIds.has(product.id));
+  return `
+    <div class="table-wrap">
+      <table>
+        <thead>
+          <tr>
+            <th class="check-cell"><input type="checkbox" id="selectAllProducts" ${allSelected ? "checked" : ""} title="Selecionar todos os produtos" /></th>
+            <th>Produto</th>
+            <th>Categoria</th>
+            <th>Estoque</th>
+            <th>Custo</th>
+            <th>Venda</th>
+            <th>Status</th>
+            <th>Acoes</th>
+          </tr>
+        </thead>
+        <tbody>
+          ${state.data.products
+            .map((product) => {
+              const low = Number(product.stock || 0) <= Number(product.minStock || 0);
+              const image = product.image || "assets/isprotec-products.png";
+              return `
+                <tr>
+                  <td class="check-cell"><input type="checkbox" data-product-select value="${product.id}" ${state.selectedProductIds.has(product.id) ? "checked" : ""} title="Selecionar produto" /></td>
+                  <td>
+                    <div class="product-cell">
+                      <img class="product-thumb" src="${escapeHtml(image)}" alt="" />
+                      <div>
+                        <strong>${escapeHtml(product.name)}</strong><br>
+                        <span class="muted">${escapeHtml(product.sku || "-")}</span>
+                      </div>
+                    </div>
+                  </td>
+                  <td>${escapeHtml(product.category || "-")}</td>
+                  <td><span class="status-pill ${low ? "alert" : "ready"}">${Number(product.stock || 0)} / min. ${Number(product.minStock || 0)}</span></td>
+                  <td>${formatCurrency(product.cost)}</td>
+                  <td>${formatCurrency(product.price)}</td>
+                  <td><span class="status-pill ${product.active === false ? "closed" : "ready"}">${product.active === false ? "Inativo" : "Ativo"}</span></td>
+                  <td><button class="mini-btn primary" data-action="edit-product" data-id="${product.id}">Editar</button></td>
                 </tr>
               `;
             })
@@ -3317,6 +3491,124 @@ function savePart(form) {
   showToast("Estoque atualizado.");
 }
 
+function openProductModal(productId = "") {
+  const product = productById(productId) || {
+    id: "",
+    sku: "",
+    name: "",
+    category: "Impressoras",
+    price: 0,
+    cost: 0,
+    stock: 0,
+    minStock: 0,
+    active: true,
+    image: "assets/isprotec-products.png",
+    description: "",
+  };
+
+  openModal(
+    product.id ? "Editar produto" : "Novo produto",
+    `
+      <form id="productForm" data-id="${product.id}" class="form-grid">
+        ${field("sku", "SKU", product.sku)}
+        ${field("name", "Nome do produto", product.name)}
+        <label class="field">
+          <label>Categoria</label>
+          <select name="category">
+            ${["Impressoras", "Toners e cartuchos", "Refis de tinta", "Pecas e acessorios", "Outros"]
+              .map((category) => `<option value="${category}" ${product.category === category ? "selected" : ""}>${category}</option>`)
+              .join("")}
+          </select>
+        </label>
+        <label class="field">
+          <label>Status no site</label>
+          <select name="active">
+            <option value="true" ${product.active !== false ? "selected" : ""}>Ativo</option>
+            <option value="false" ${product.active === false ? "selected" : ""}>Inativo</option>
+          </select>
+        </label>
+        ${field("stock", "Estoque atual", product.stock, "number")}
+        ${field("minStock", "Estoque minimo", product.minStock, "number")}
+        ${field("cost", "Custo", product.cost, "number")}
+        ${field("price", "Preco de venda", product.price, "number")}
+        <label class="field full">
+          <label>Descricao</label>
+          <textarea name="description" rows="4">${escapeHtml(product.description || "")}</textarea>
+        </label>
+        <label class="field full">
+          <label>Foto do produto</label>
+          <div class="logo-upload-control product-image-upload">
+            <img id="productImagePreview" src="${escapeHtml(product.image || "assets/isprotec-products.png")}" alt="Previa do produto" />
+            <div class="logo-upload-content">
+              <input id="productImageInput" name="imageFile" type="file" accept="image/png,image/jpeg,image/webp" />
+              <small>PNG, JPG ou WEBP. Tamanho maximo: 1 MB.</small>
+              <input type="hidden" name="image" value="${escapeHtml(product.image || "assets/isprotec-products.png")}" />
+            </div>
+          </div>
+        </label>
+        <div class="form-actions field full">
+          <button class="btn primary" type="submit">Salvar produto</button>
+        </div>
+      </form>
+    `,
+    "Produtos"
+  );
+}
+
+async function saveProduct(form) {
+  const id = form.dataset.id;
+  const data = Object.fromEntries(new FormData(form).entries());
+  if (!data.name.trim()) {
+    showToast("Informe o nome do produto.");
+    return;
+  }
+
+  const record = {
+    id: id || uid("prod"),
+    sku: data.sku.trim(),
+    name: data.name.trim(),
+    category: data.category,
+    price: Number(data.price || 0),
+    cost: Number(data.cost || 0),
+    stock: Number(data.stock || 0),
+    minStock: Number(data.minStock || 0),
+    active: data.active === "true",
+    image: data.image || "assets/isprotec-products.png",
+    description: data.description.trim(),
+  };
+  const index = state.data.products.findIndex((product) => product.id === id);
+  if (index >= 0) state.data.products[index] = record;
+  else state.data.products.push(record);
+  saveData();
+  closeModal();
+  renderProducts();
+  showToast("Produto salvo.");
+}
+
+async function previewProductImage(input) {
+  const file = input.files?.[0];
+  if (!file) return;
+  if (file.size > MAX_LOGO_FILE_SIZE) {
+    showToast("A imagem deve ter no maximo 1 MB.");
+    input.value = "";
+    return;
+  }
+  if (!["image/png", "image/jpeg", "image/webp"].includes(file.type)) {
+    showToast("Use imagem PNG, JPG ou WEBP.");
+    input.value = "";
+    return;
+  }
+  try {
+    const dataUrl = await readLogoFile(file);
+    const preview = document.getElementById("productImagePreview");
+    const hidden = input.closest("form")?.querySelector('input[name="image"]');
+    if (preview) preview.src = dataUrl;
+    if (hidden) hidden.value = dataUrl;
+  } catch (error) {
+    showToast(error.message);
+  }
+}
+
 function openStockInModal(partId) {
   const part = partById(partId);
   if (!part) return;
@@ -4257,6 +4549,9 @@ document.addEventListener("click", (event) => {
     "new-part": () => openPartModal(),
     "edit-part": () => openPartModal(id),
     "delete-selected-parts": deleteSelectedParts,
+    "new-product": () => openProductModal(),
+    "edit-product": () => openProductModal(id),
+    "delete-selected-products": deleteSelectedProducts,
     "stock-in": () => openStockInModal(id),
     "new-cash": () => openCashModal(),
     "edit-cash": () => openCashModal(id),
@@ -4314,6 +4609,7 @@ document.addEventListener("submit", (event) => {
     equipmentForm: saveEquipment,
     userForm: saveUser,
     partForm: savePart,
+    productForm: saveProduct,
     stockInForm: saveStockIn,
     cashForm: saveCash,
     receiveOrderForm: saveReceiveOrder,
@@ -4341,6 +4637,9 @@ document.addEventListener("input", (event) => {
 document.addEventListener("change", (event) => {
   if (event.target.id === "companyLogoInput") {
     previewCompanyLogo(event.target);
+  }
+  if (event.target.id === "productImageInput") {
+    previewProductImage(event.target);
   }
   if (event.target.id === "selectAllOrders") {
     toggleVisibleOrdersSelection(event.target.checked);
@@ -4394,6 +4693,15 @@ document.addEventListener("change", (event) => {
     if (event.target.checked) state.selectedPartIds.add(event.target.value);
     else state.selectedPartIds.delete(event.target.value);
     renderInventory();
+  }
+  if (event.target.id === "selectAllProducts") {
+    toggleSelectionSet(state.selectedProductIds, state.data.products, event.target.checked);
+    renderProducts();
+  }
+  if (event.target.matches("[data-product-select]")) {
+    if (event.target.checked) state.selectedProductIds.add(event.target.value);
+    else state.selectedProductIds.delete(event.target.value);
+    renderProducts();
   }
   if (event.target.id === "selectAllTransactions") {
     toggleSelectionSet(state.selectedTransactionIds, currentMonthTransactions(), event.target.checked);
