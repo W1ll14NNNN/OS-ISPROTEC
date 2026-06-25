@@ -21,6 +21,7 @@ button, input, textarea { font: inherit; }
 .site-header {
   position: absolute; z-index: 5; top: 0; left: 0; right: 0; display: flex; align-items: center; justify-content: space-between; gap: 20px; padding: 18px clamp(20px, 5vw, 72px);
 }
+.static-header { position: sticky; background: #070b11; border-bottom: 1px solid rgba(255,255,255,.12); }
 .site-brand { display: inline-flex; align-items: center; gap: 9px; font-size: 25px; font-weight: 900; letter-spacing: 0; }
 .site-brand img { width: 34px; height: 34px; object-fit: contain; }
 .site-brand > span > span { color: var(--blue); }
@@ -92,6 +93,7 @@ h2 { max-width: 750px; margin-bottom: 14px; font-size: clamp(30px, 4vw, 48px); l
 .product-tag { display: inline-flex; width: fit-content; padding: 4px 10px; border-radius: 999px; background: rgba(11,155,232,.18); color: #8ed6ff; font-size: 11px; font-weight: 800; text-transform: uppercase; }
 .product-card .button { width: 100%; }
 .checkout-section { padding: 92px clamp(20px, 8vw, 132px); background: #0b1722; color: #fff; }
+.checkout-page { min-height: calc(100vh - 160px); padding-top: 72px; }
 .checkout-section .section-heading > p:not(.kicker) { color: #b8c6d0; }
 .product-order-form { width: min(1040px, 100%); margin-top: 24px; padding: 22px; border: 1px solid rgba(255,255,255,.12); border-radius: 8px; background: rgba(255,255,255,.04); }
 .product-order-form select { width: 100%; min-height: 44px; padding: 10px 12px; border: 1px solid #3a4b59; border-radius: 5px; background: #111c27; color: #fff; }

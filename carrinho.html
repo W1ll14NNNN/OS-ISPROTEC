@@ -1,0 +1,91 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta name="description" content="Carrinho e pagamento da Loja ISPROTEC." />
+  <title>Loja ISPROTEC | Carrinho e pagamento</title>
+  <link rel="stylesheet" href="site.css" />
+</head>
+<body>
+  <header class="site-header static-header">
+    <a class="site-brand" href="index.html#inicio" aria-label="ISPROTEC, início">
+      <img src="assets/isprotec-logo.svg" alt="" />
+      <span>IS<span>PROTEC</span></span>
+    </a>
+    <nav aria-label="Navegação principal">
+      <a href="index.html#servicos">Serviços</a>
+      <a href="index.html#produtos">Loja ISPROTEC</a>
+      <a href="index.html#acompanhar">Acompanhar OS</a>
+      <a href="index.html#agendar">Agendar</a>
+      <a href="index.html#contato">Contato</a>
+    </nav>
+    <a class="header-action" href="sistema.html" title="Área interna">
+      <i data-lucide="lock-keyhole"></i><span>Área interna</span>
+    </a>
+  </header>
+
+  <main>
+    <section class="checkout-section checkout-page" id="carrinho" aria-labelledby="checkout-title">
+      <div class="section-heading">
+        <p class="kicker">Carrinho e pagamento</p>
+        <h1 id="checkout-title">Finalize seu pedido</h1>
+        <p>Revise os itens escolhidos, informe seus dados e selecione a forma de pagamento.</p>
+        <a class="button outline cart-link" href="index.html#produtos">Adicionar mais produtos</a>
+      </div>
+      <form class="product-order-form" id="productOrderForm">
+        <div class="cart-summary" id="cartSummary" hidden>
+          <div>
+            <p class="kicker">Carrinho</p>
+            <h3 id="cartProductName">Itens selecionados</h3>
+            <div class="cart-items" id="cartItems"></div>
+          </div>
+          <strong id="cartTotal">Total: R$ 0,00</strong>
+        </div>
+        <div class="payment-options" id="paymentOptions" hidden>
+          <h3>Pagamento</h3>
+          <label class="payment-option">
+            <input type="radio" name="paymentMethod" value="pix" checked />
+            <span>Pix</span>
+          </label>
+          <div class="pix-payment">
+            <img id="pixQrImage" src="" alt="QR Code Pix ISPROTEC" />
+            <div>
+              <strong>Pix copia e cola</strong>
+              <p>Informe o valor do pedido no aplicativo do banco antes de confirmar.</p>
+              <textarea id="pixCopyPaste" readonly rows="4"></textarea>
+              <button class="button outline" type="button" id="copyPixButton">Copiar Pix</button>
+            </div>
+          </div>
+        </div>
+        <div class="form-grid">
+          <input name="product" id="productName" type="hidden" required />
+          <input name="productId" id="productId" type="hidden" />
+          <input name="quantity" id="productQuantity" type="hidden" min="1" value="1" required />
+          <label>Nome completo<input name="name" autocomplete="name" required /></label>
+          <label>WhatsApp<input name="phone" inputmode="tel" autocomplete="tel" required /></label>
+          <label>E-mail<input name="email" type="email" autocomplete="email" /></label>
+          <label>Tipo de solicitação
+            <select name="requestType" id="productRequestType" required>
+              <option value="budget">Orçamento</option>
+              <option value="payment">Pagamento</option>
+            </select>
+          </label>
+          <label class="full">Observações<textarea name="notes" rows="4" placeholder="Se quiser, adicione modelo, cor, voltagem ou detalhes do pedido."></textarea></label>
+        </div>
+        <button class="button primary" type="submit"><i data-lucide="shopping-cart"></i>Enviar pedido</button>
+        <p class="form-feedback" id="productFeedback" aria-live="polite"></p>
+      </form>
+    </section>
+  </main>
+
+  <footer>
+    <span>ISPROTEC Assistência Técnica em Impressoras</span>
+    <a href="https://wa.me/5562996516079" target="_blank" rel="noopener">WhatsApp: (62) 99651-6079</a>
+  </footer>
+
+  <script src="https://unpkg.com/lucide@latest/dist/umd/lucide.min.js"></script>
+  <script src="site.js"></script>
+  <script>lucide.createIcons();</script>
+</body>
+</html>

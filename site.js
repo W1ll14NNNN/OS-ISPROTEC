@@ -18,8 +18,9 @@ const pixQrImage = document.getElementById("pixQrImage");
 const pixCopyPaste = document.getElementById("pixCopyPaste");
 const copyPixButton = document.getElementById("copyPixButton");
 
+const CART_KEY = "isprotec-site-cart-v1";
 const PIX_COPY_PASTE = "00020101021126360014br.gov.bcb.pix0114419673050001545204000053039865802BR5919WILLIAN SILVA BARRO6007GOIANIA62070503***63040745";
-let cart = [];
+let cart = loadCart();
 
 let trackedCredentials = null;
 
@@ -173,6 +174,19 @@ function pixQrUrl() {
   return "https://api.qrserver.com/v1/create-qr-code/?size=180x180&margin=8&data=" + encodeURIComponent(PIX_COPY_PASTE);
 }
 
+function loadCart() {
+  try {
+    const parsed = JSON.parse(localStorage.getItem(CART_KEY) || "[]");
+    return Array.isArray(parsed) ? parsed : [];
+  } catch {
+    return [];
+  }
+}
+
+function saveCart() {
+  localStorage.setItem(CART_KEY, JSON.stringify(cart));
+}
+
 function cartAmount() {
   return cart.reduce((sum, item) => sum + Number(item.price || 0) * Number(item.quantity || 1), 0);
 }
@@ -186,6 +200,7 @@ function syncCartFields() {
 }
 
 function updateCartSummary() {
+  saveCart();
   syncCartFields();
   const total = cartAmount();
   if (cartSummary) cartSummary.hidden = cart.length === 0;
@@ -206,7 +221,7 @@ function updateCartSummary() {
             </div>
           </div>
         `).join("")
-      : `<p>Nenhum item no carrinho.</p>`;
+      : `<p>Nenhum item no carrinho. <a href="index.html#produtos">Voltar para a loja</a></p>`;
   }
   if (cartTotal) cartTotal.textContent = total > 0 ? "Total: " + money(total) : "Total sob consulta";
   if (paymentOptions) paymentOptions.hidden = productRequestType?.value !== "payment";
@@ -224,7 +239,7 @@ function addProductToCart(button) {
   if (existing) existing.quantity += 1;
   else cart.push({ key, id, name, price, quantity: 1 });
   updateCartSummary();
-  document.getElementById("carrinho")?.scrollIntoView({ behavior: "smooth", block: "start" });
+  window.location.href = "carrinho.html";
 }
 
 function bindProductPresetButtons() {
@@ -248,6 +263,7 @@ async function loadProducts() {
 }
 
 loadProducts();
+updateCartSummary();
 
 productQuantity?.addEventListener("input", updateCartSummary);
 productRequestType?.addEventListener("change", updateCartSummary);
@@ -309,6 +325,7 @@ productOrderForm?.addEventListener("submit", async (event) => {
     productQuantity.value = "1";
     if (productId) productId.value = "";
     cart = [];
+    saveCart();
     updateCartSummary();
     productRequestType.value = "budget";
     productFeedback.textContent = data.message || "Pedido enviado com sucesso.";
