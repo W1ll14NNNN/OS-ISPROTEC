@@ -157,12 +157,20 @@
           <button class="button primary" type="button" data-product-preset="Peças e acessórios" data-product-price="0" data-request-mode="budget">Adicionar ao carrinho</button>
         </article>
       </div>
+    </section>
+
+    <section class="checkout-section" id="carrinho" aria-labelledby="checkout-title">
+      <div class="section-heading">
+        <p class="kicker">Carrinho e pagamento</p>
+        <h2 id="checkout-title">Finalize seu pedido</h2>
+        <p>Revise os itens escolhidos, informe seus dados e selecione a forma de pagamento.</p>
+      </div>
       <form class="product-order-form" id="productOrderForm">
         <div class="cart-summary" id="cartSummary" hidden>
           <div>
             <p class="kicker">Carrinho</p>
-            <h3 id="cartProductName">Produto selecionado</h3>
-            <p id="cartProductPrice">Valor sob consulta</p>
+            <h3 id="cartProductName">Itens selecionados</h3>
+            <div class="cart-items" id="cartItems"></div>
           </div>
           <strong id="cartTotal">Total: R$ 0,00</strong>
         </div>
@@ -183,9 +191,9 @@
           </div>
         </div>
         <div class="form-grid">
-          <label>Produto selecionado<input name="product" id="productName" required /></label>
+          <input name="product" id="productName" type="hidden" required />
           <input name="productId" id="productId" type="hidden" />
-          <label>Quantidade<input name="quantity" id="productQuantity" type="number" min="1" value="1" required /></label>
+          <input name="quantity" id="productQuantity" type="hidden" min="1" value="1" required />
           <label>Nome completo<input name="name" autocomplete="name" required /></label>
           <label>WhatsApp<input name="phone" inputmode="tel" autocomplete="tel" required /></label>
           <label>E-mail<input name="email" type="email" autocomplete="email" /></label>

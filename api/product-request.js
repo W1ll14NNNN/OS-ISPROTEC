@@ -23,9 +23,10 @@ export default async function handler(request, response) {
     const quantity = Math.max(1, Number(body.quantity || 1));
     const requestType = body.requestType === "payment" ? "payment" : "budget";
     const notes = safeText(body.notes, 800);
+    const cartItems = Array.isArray(body.cartItems) ? body.cartItems : [];
 
-    if (!name || phone.length < 10 || !product || !quantity) {
-      return sendJson(response, 400, { message: "Preencha nome, telefone, produto e quantidade." });
+    if (!name || phone.length < 10 || (!product && !cartItems.length)) {
+      return sendJson(response, 400, { message: "Preencha nome, telefone e pelo menos um produto." });
     }
 
     const state = await loadState();
@@ -54,16 +55,29 @@ export default async function handler(request, response) {
     const highestNumber = Math.max(0, ...state.orders.map((item) => Number(item.number) || 0));
     const number = Math.max(Number(state.settings.nextOrderNumber || 1), highestNumber + 1);
     const createdAt = today();
-    const systemProduct = state.products.find((item) => item.id === body.productId || item.name === product);
-    const catalog = systemProduct || productCatalog[product] || { sku: "WEB-OUT", price: 0 };
-    const price = Number(catalog.price || 0);
+    const requestItems = (cartItems.length ? cartItems : [{ productId: body.productId, product, quantity, price: body.total }])
+      .map((item) => {
+        const itemName = safeText(item.product || item.name, 120);
+        const systemProduct = state.products.find((productItem) => productItem.id === item.productId || productItem.name === itemName);
+        const catalog = systemProduct || productCatalog[itemName] || { sku: "WEB-OUT", price: item.price || 0 };
+        return {
+          product: itemName,
+          productId: systemProduct?.id || safeText(item.productId, 80),
+          sku: catalog.sku || "",
+          quantity: Math.max(1, Number(item.quantity || 1)),
+          price: Number(item.price || catalog.price || 0),
+        };
+      })
+      .filter((item) => item.product);
+    const productSummary = requestItems.map((item) => item.quantity + "x " + item.product).join(", ");
+    const finalRequestType = requestItems.some((item) => Number(item.price || 0) <= 0) ? "budget" : requestType;
     state.orders.unshift({
       id: uid("os"),
       number,
       customerId: customer.id,
       equipmentId: equipment.id,
       title: "Pedido de produto",
-      issue: "Pedido online: " + product + (notes ? " - " + notes : ""),
+      issue: "Pedido online: " + productSummary + (notes ? " - " + notes : ""),
       diagnosis: "",
       solution: "",
       status: requestType === "payment" ? "Entrada" : "Orçamento",

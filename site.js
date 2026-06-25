@@ -11,7 +11,7 @@ const productRequestType = document.getElementById("productRequestType");
 const productsGrid = document.getElementById("productsGrid");
 const cartSummary = document.getElementById("cartSummary");
 const cartProductName = document.getElementById("cartProductName");
-const cartProductPrice = document.getElementById("cartProductPrice");
+const cartItems = document.getElementById("cartItems");
 const cartTotal = document.getElementById("cartTotal");
 const paymentOptions = document.getElementById("paymentOptions");
 const pixQrImage = document.getElementById("pixQrImage");
@@ -19,7 +19,7 @@ const pixCopyPaste = document.getElementById("pixCopyPaste");
 const copyPixButton = document.getElementById("copyPixButton");
 
 const PIX_COPY_PASTE = "00020101021126360014br.gov.bcb.pix0114419673050001545204000053039865802BR5919WILLIAN SILVA BARRO6007GOIANIA62070503***63040745";
-let selectedProductPrice = 0;
+let cart = [];
 
 let trackedCredentials = null;
 
@@ -173,28 +173,64 @@ function pixQrUrl() {
   return "https://api.qrserver.com/v1/create-qr-code/?size=180x180&margin=8&data=" + encodeURIComponent(PIX_COPY_PASTE);
 }
 
+function cartAmount() {
+  return cart.reduce((sum, item) => sum + Number(item.price || 0) * Number(item.quantity || 1), 0);
+}
+
+function syncCartFields() {
+  const names = cart.map((item) => `${item.quantity}x ${item.name}`).join(", ");
+  if (productName) productName.value = names;
+  if (productId) productId.value = cart.map((item) => item.id).filter(Boolean).join(",");
+  if (productQuantity) productQuantity.value = cart.reduce((sum, item) => sum + Number(item.quantity || 1), 0) || 1;
+  if (productRequestType) productRequestType.value = cart.some((item) => Number(item.price || 0) <= 0) ? "budget" : "payment";
+}
+
 function updateCartSummary() {
-  const quantity = Math.max(1, Number(productQuantity?.value || 1));
-  const total = selectedProductPrice * quantity;
-  if (cartProductName) cartProductName.textContent = productName?.value || "Produto selecionado";
-  if (cartProductPrice) cartProductPrice.textContent = selectedProductPrice > 0 ? "Valor unitario: " + money(selectedProductPrice) : "Valor sob consulta";
-  if (cartTotal) cartTotal.textContent = selectedProductPrice > 0 ? "Total: " + money(total) : "Total sob consulta";
+  syncCartFields();
+  const total = cartAmount();
+  if (cartSummary) cartSummary.hidden = cart.length === 0;
+  if (cartProductName) cartProductName.textContent = cart.length === 1 ? "1 item no carrinho" : `${cart.length} itens no carrinho`;
+  if (cartItems) {
+    cartItems.innerHTML = cart.length
+      ? cart.map((item) => `
+          <div class="cart-line">
+            <div>
+              <strong>${escapeHtml(item.name)}</strong>
+              <span>${Number(item.price || 0) > 0 ? money(item.price) : "Sob consulta"}</span>
+            </div>
+            <div class="cart-line-actions">
+              <button type="button" data-cart-minus="${escapeHtml(item.key)}">-</button>
+              <span>${item.quantity}</span>
+              <button type="button" data-cart-plus="${escapeHtml(item.key)}">+</button>
+              <button type="button" data-cart-remove="${escapeHtml(item.key)}">Remover</button>
+            </div>
+          </div>
+        `).join("")
+      : `<p>Nenhum item no carrinho.</p>`;
+  }
+  if (cartTotal) cartTotal.textContent = total > 0 ? "Total: " + money(total) : "Total sob consulta";
   if (paymentOptions) paymentOptions.hidden = productRequestType?.value !== "payment";
   if (pixQrImage) pixQrImage.src = pixQrUrl();
   if (pixCopyPaste) pixCopyPaste.value = PIX_COPY_PASTE;
 }
 
+function addProductToCart(button) {
+  const name = button.dataset.productPreset || "";
+  if (!name) return;
+  const id = button.dataset.productId || "";
+  const price = Number(button.dataset.productPrice || 0);
+  const key = id || name;
+  const existing = cart.find((item) => item.key === key);
+  if (existing) existing.quantity += 1;
+  else cart.push({ key, id, name, price, quantity: 1 });
+  updateCartSummary();
+  productOrderForm?.scrollIntoView({ behavior: "smooth", block: "start" });
+}
+
 function bindProductPresetButtons() {
   document.querySelectorAll("[data-product-preset]").forEach((button) => {
     button.addEventListener("click", () => {
-      if (productName) productName.value = button.dataset.productPreset || "";
-      if (productId) productId.value = button.dataset.productId || "";
-      selectedProductPrice = Number(button.dataset.productPrice || 0);
-      if (productQuantity) productQuantity.value = "1";
-      if (productRequestType) productRequestType.value = button.dataset.requestMode || "budget";
-      if (cartSummary) cartSummary.hidden = false;
-      updateCartSummary();
-      productOrderForm?.scrollIntoView({ behavior: "smooth", block: "start" });
+      addProductToCart(button);
     });
   });
 }
@@ -215,6 +251,19 @@ loadProducts();
 
 productQuantity?.addEventListener("input", updateCartSummary);
 productRequestType?.addEventListener("change", updateCartSummary);
+cartSummary?.addEventListener("click", (event) => {
+  const minus = event.target.closest("[data-cart-minus]");
+  const plus = event.target.closest("[data-cart-plus]");
+  const remove = event.target.closest("[data-cart-remove]");
+  const key = minus?.dataset.cartMinus || plus?.dataset.cartPlus || remove?.dataset.cartRemove;
+  if (!key) return;
+  const item = cart.find((entry) => entry.key === key);
+  if (!item) return;
+  if (plus) item.quantity += 1;
+  if (minus) item.quantity = Math.max(1, item.quantity - 1);
+  if (remove) cart = cart.filter((entry) => entry.key !== key);
+  updateCartSummary();
+});
 copyPixButton?.addEventListener("click", async () => {
   try {
     await navigator.clipboard.writeText(PIX_COPY_PASTE);
@@ -227,10 +276,22 @@ copyPixButton?.addEventListener("click", async () => {
 
 productOrderForm?.addEventListener("submit", async (event) => {
   event.preventDefault();
+  if (!cart.length) {
+    productFeedback.textContent = "Adicione pelo menos um item ao carrinho.";
+    document.getElementById("produtos")?.scrollIntoView({ behavior: "smooth", block: "start" });
+    return;
+  }
   const submitButton = productOrderForm.querySelector('button[type="submit"]');
   const payload = Object.fromEntries(new FormData(productOrderForm).entries());
   payload.phone = digitsOnly(payload.phone);
   payload.quantity = Number(payload.quantity || 1);
+  payload.cartItems = cart.map((item) => ({
+    productId: item.id,
+    product: item.name,
+    quantity: item.quantity,
+    price: item.price,
+  }));
+  payload.total = cartAmount();
 
   submitButton.disabled = true;
   productFeedback.textContent = payload.requestType === "payment" ? "Preparando seu pedido para pagamento..." : "Enviando seu pedido para orçamento...";
@@ -247,9 +308,8 @@ productOrderForm?.addEventListener("submit", async (event) => {
     productOrderForm.reset();
     productQuantity.value = "1";
     if (productId) productId.value = "";
-    selectedProductPrice = 0;
-    if (cartSummary) cartSummary.hidden = true;
-    if (paymentOptions) paymentOptions.hidden = true;
+    cart = [];
+    updateCartSummary();
     productRequestType.value = "budget";
     productFeedback.textContent = data.message || "Pedido enviado com sucesso.";
   } catch (error) {
