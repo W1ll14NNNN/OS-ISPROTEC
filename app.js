@@ -944,6 +944,27 @@ function financeTotals(month = state.financeMonth) {
   );
 }
 
+function orderFinanceTotals(month = state.financeMonth) {
+  const orders = state.data.orders.filter((order) => monthOf(order.createdAt) === month);
+  return orders.reduce(
+    (acc, order) => {
+      const gross = orderTotal(order);
+      const cost = orderCost(order);
+      acc.count += 1;
+      acc.gross += gross;
+      acc.cost += cost;
+      acc.profit += gross - cost;
+      acc.partsCost += (order.parts || []).reduce((sum, item) => {
+        const part = partById(item.partId);
+        return sum + Number(item.qty || 0) * Number(part?.cost || 0);
+      }, 0);
+      acc.serviceCost += serviceCost(order);
+      return acc;
+    },
+    { count: 0, gross: 0, cost: 0, profit: 0, partsCost: 0, serviceCost: 0 }
+  );
+}
+
 function setView(viewName) {
   state.activeView = viewName;
   document.querySelectorAll(".nav-item").forEach((button) => {
@@ -1916,6 +1937,7 @@ function renderFinance() {
   pruneSelectedTransactions();
   const transactionCount = state.selectedTransactionIds.size;
   const totals = financeTotals();
+  const osTotals = orderFinanceTotals();
   const txs = currentMonthTransactions().sort((a, b) => (b.paidDate || b.dueDate).localeCompare(a.paidDate || a.dueDate));
 
   document.getElementById("financeView").innerHTML = `
@@ -1943,12 +1965,35 @@ function renderFinance() {
         <article class="metric-card accent-blue">
           <small>Saldo</small>
           <strong>${formatCurrency(totals.income - totals.expense)}</strong>
-          <em>Resultado realizado</em>
+          <em>Lucro OS: ${formatCurrency(osTotals.profit)}</em>
         </article>
         <article class="metric-card accent-yellow">
           <small>Pendências</small>
           <strong>${formatCurrency(totals.receivable - totals.payable)}</strong>
           <em>A receber menos a pagar</em>
+        </article>
+      </div>
+
+      <div class="grid-4">
+        <article class="metric-card accent-cyan">
+          <small>Total bruto das OS</small>
+          <strong>${formatCurrency(osTotals.gross)}</strong>
+          <em>${osTotals.count} OS aberta(s) no mês</em>
+        </article>
+        <article class="metric-card accent-magenta">
+          <small>Custos das OS</small>
+          <strong>${formatCurrency(osTotals.cost)}</strong>
+          <em>Peças ${formatCurrency(osTotals.partsCost)} · mão de obra ${formatCurrency(osTotals.serviceCost)}</em>
+        </article>
+        <article class="metric-card accent-yellow">
+          <small>Lucro das OS</small>
+          <strong>${formatCurrency(osTotals.profit)}</strong>
+          <em>Total bruto menos custos</em>
+        </article>
+        <article class="metric-card accent-blue">
+          <small>Margem das OS</small>
+          <strong>${osTotals.gross ? ((osTotals.profit / osTotals.gross) * 100).toFixed(1) : "0.0"}%</strong>
+          <em>Lucro sobre total bruto</em>
         </article>
       </div>
 
